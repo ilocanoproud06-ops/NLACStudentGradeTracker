@@ -80,8 +80,10 @@ export default function AdminDashboard({ onLogout }) {
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [showHPSModal, setShowHPSModal] = useState(false);
+  const [showGradeModal, setShowGradeModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingAssessment, setEditingAssessment] = useState(null);
+  const [editingGrade, setEditingGrade] = useState(null);
 
   // Form states
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
@@ -99,6 +101,7 @@ export default function AdminDashboard({ onLogout }) {
     instructorComments: '' 
   });
   const [hpsUpdates, setHpsUpdates] = useState({});
+  const [editingGradeData, setEditingGradeData] = useState({ studentId: '', assessmentId: '', score: '' });
 
   // Computed values
   const filteredAssessments = useMemo(() => 
@@ -127,6 +130,51 @@ export default function AdminDashboard({ onLogout }) {
   const getUnenrolledStudents = (courseId) => {
     const enrolledIds = enrollments.filter(e => e.courseId === courseId).map(e => e.studentId);
     return students.filter(s => !enrolledIds.includes(s.id));
+  };
+
+  // Grade calculation helpers
+  const calculatePercentage = (score, hps) => {
+    if (!score || score === "" || !hps) return 0;
+    return Math.round((parseFloat(score) / hps) * 100);
+  };
+
+  const calculateEquivalent = (percentage) => {
+    if (percentage >= 97) return 1.0;
+    if (percentage >= 93) return 1.25;
+    if (percentage >= 90) return 1.5;
+    if (percentage >= 87) return 1.75;
+    if (percentage >= 84) return 2.0;
+    if (percentage >= 81) return 2.25;
+    if (percentage >= 78) return 2.5;
+    if (percentage >= 75) return 2.75;
+    if (percentage >= 72) return 3.0;
+    if (percentage >= 69) return 3.25;
+    if (percentage >= 66) return 3.5;
+    if (percentage >= 63) return 3.75;
+    if (percentage >= 60) return 4.0;
+    return 5.0;
+  };
+
+  const calculateLetterGrade = (percentage) => {
+    if (percentage >= 97) return 'A+';
+    if (percentage >= 93) return 'A';
+    if (percentage >= 90) return 'A-';
+    if (percentage >= 87) return 'B+';
+    if (percentage >= 84) return 'B';
+    if (percentage >= 81) return 'B-';
+    if (percentage >= 78) return 'C+';
+    if (percentage >= 75) return 'C';
+    if (percentage >= 72) return 'C-';
+    if (percentage >= 69) return 'D+';
+    if (percentage >= 66) return 'D';
+    if (percentage >= 63) return 'D-';
+    return 'F';
+  };
+
+  const deleteGrade = (studentId, assessmentId) => {
+    if (window.confirm('Delete this grade record?')) {
+      setGrades(grades.filter(g => !(g.studentId === studentId && g.assessmentId === assessmentId)));
+    }
   };
 
   // Handlers
@@ -298,6 +346,20 @@ export default function AdminDashboard({ onLogout }) {
     
     // Show success message
     alert(`✅ Student data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll student changes have been saved to the database.`);
+  };
+
+  // Grade editing handlers
+  const openGradeModal = (studentId, assessmentId) => {
+    const score = getScore(studentId, assessmentId);
+    setEditingGradeData({ studentId, assessmentId, score: score || '' });
+    setShowGradeModal(true);
+  };
+
+  const handleSaveGrade = () => {
+    const { studentId, assessmentId, score } = editingGradeData;
+    updateGrade(studentId, assessmentId, score);
+    setShowGradeModal(false);
+    setEditingGradeData({ studentId: '', assessmentId: '', score: '' });
   };
 
   // Render functions
@@ -557,77 +619,197 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
-  const renderGradeEntry = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800">Grade Entry</h2>
-          <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Enter Student Grades</p>
-        </div>
-        <div className="flex gap-2">
-          <select value={selectedCourseId} onChange={e => setSelectedCourseId(parseInt(e.target.value))} className="bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm">
-            {courses.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
-          </select>
-          <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm">
-            {["January","February","March","April","May","June","July","August","September","October","November","December"].map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
-      </div>
+  const renderGradeEntry = () => {
+    // Sort students alphabetically by name
+    const sortedStudents = [...studentsInCourse].sort((a, b) => a.name.localeCompare(b.name));
 
-      {studentsInCourse.length === 0 ? (
-        <div className="p-8 bg-amber-50 border border-amber-200 rounded-2xl text-center">
-          <p className="font-bold text-amber-700">No students enrolled in this course</p>
-          <p className="text-sm text-amber-600">Go to Enrollment to add students</p>
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800">Grade Entry</h2>
+            <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Comprehensive Grade Management</p>
+          </div>
+          <div className="flex gap-2">
+            <select value={selectedCourseId} onChange={e => setSelectedCourseId(parseInt(e.target.value))} className="bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm">
+              {courses.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+            </select>
+            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-white p-3 rounded-xl border border-slate-200 font-bold text-sm">
+              {["January","February","March","April","May","June","July","August","September","October","November","December"].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="sticky left-0 bg-slate-900 px-8 py-6 text-left text-xs font-black text-slate-500 uppercase min-w-[200px]">Student</th>
-                {filteredAssessments.map(a => (
-                  <th key={a.id} className="px-4 py-6 text-center min-w-[120px]">
-                    <div className="text-[10px] font-black text-blue-400 uppercase">{a.category}</div>
-                    <div className="text-xs font-black">{a.title}</div>
-                    <div className="text-[10px] text-slate-500 italic">HPS: {a.hps}</div>
-                  </th>
-                ))}
-                <th className="px-8 py-6 text-center bg-indigo-900/50">Average</th>
-              </tr>
-            </thead>
-            <tbody>
-              {studentsInCourse.map((student, sIdx) => {
-                let totalEarned = 0, totalHps = 0;
-                return (
-                  <tr key={student.id} className="border-b border-slate-100">
-                    <td className="sticky left-0 bg-white px-8 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black">{sIdx + 1}</div>
-                        <div>
-                          <div className="font-bold">{student.name}</div>
-                          <div className="text-[10px] text-slate-400 uppercase">{student.studentIdNum}</div>
+
+        {sortedStudents.length === 0 ? (
+          <div className="p-8 bg-amber-50 border border-amber-200 rounded-2xl text-center">
+            <p className="font-bold text-amber-700">No students enrolled in this course</p>
+            <p className="text-sm text-amber-600">Go to Enrollment to add students</p>
+          </div>
+        ) : filteredAssessments.length === 0 ? (
+          <div className="p-8 bg-blue-50 border border-blue-200 rounded-2xl text-center">
+            <p className="font-bold text-blue-700">No assessments found for {selectedMonth}</p>
+            <p className="text-sm text-blue-600">Go to Assessment Management to create assessments</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1200px]">
+                <thead>
+                  <tr className="bg-slate-900 text-white">
+                    <th className="sticky left-0 bg-slate-900 px-8 py-4 text-left text-xs font-black text-slate-500 uppercase min-w-[250px]">Student</th>
+                    {filteredAssessments.map(a => (
+                      <th key={a.id} className="px-3 py-4 text-center min-w-[180px]">
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-black text-blue-400 uppercase">{a.category}</div>
+                          <div className="text-xs font-black">{a.title}</div>
+                          <div className="text-[10px] text-slate-500">{a.date}</div>
+                          <div className="text-[10px] text-slate-400">HPS: {a.hps}</div>
                         </div>
-                      </div>
-                    </td>
-                    {filteredAssessments.map(a => {
-                      const score = getScore(student.id, a.id);
-                      if (score !== "" && score !== null) { totalEarned += parseFloat(score); totalHps += a.hps; }
-                      return (
-                        <td key={a.id} className="px-4 py-3 text-center">
-                          <input type="number" max={a.hps} value={score} onChange={e => updateGrade(student.id, a.id, e.target.value)} className="w-20 px-3 py-2 bg-slate-50 rounded-xl text-center font-bold" placeholder="-" />
-                        </td>
-                      );
-                    })}
-                    <td className="px-8 py-4 text-center bg-slate-50/50"><span className="font-black text-indigo-600">{totalHps > 0 ? Math.round((totalEarned/totalHps)*100) : 0}%</span></td>
+                      </th>
+                    ))}
+                    <th className="px-6 py-4 text-center bg-indigo-900/50 min-w-[120px]">
+                      <div className="text-xs font-black text-slate-500 uppercase">Overall</div>
+                      <div className="text-[10px] text-slate-400">Average</div>
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+                </thead>
+                <tbody>
+                  {sortedStudents.map((student, sIdx) => {
+                    let totalEarned = 0, totalHps = 0;
+                    const studentGrades = filteredAssessments.map(a => {
+                      const score = getScore(student.id, a.id);
+                      const percentage = calculatePercentage(score, a.hps);
+                      const equivalent = calculateEquivalent(percentage);
+                      const letterGrade = calculateLetterGrade(percentage);
+
+                      if (score !== "" && score !== null && !isNaN(parseFloat(score))) {
+                        totalEarned += parseFloat(score);
+                        totalHps += a.hps;
+                      }
+
+                      return {
+                        assessment: a,
+                        score,
+                        percentage,
+                        equivalent,
+                        letterGrade
+                      };
+                    });
+
+                    const overallPercentage = totalHps > 0 ? Math.round((totalEarned/totalHps)*100) : 0;
+                    const overallEquivalent = calculateEquivalent(overallPercentage);
+                    const overallLetterGrade = calculateLetterGrade(overallPercentage);
+
+                    return (
+                      <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="sticky left-0 bg-white px-8 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black">{sIdx + 1}</div>
+                            <div>
+                              <div className="font-bold text-slate-800">{student.name}</div>
+                              <div className="text-[10px] text-slate-400 uppercase">{student.studentIdNum}</div>
+                            </div>
+                          </div>
+                        </td>
+                        {studentGrades.map(({ assessment, score, percentage, equivalent, letterGrade }) => (
+                          <td key={assessment.id} className="px-3 py-3 text-center">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => openGradeModal(student.id, assessment.id)}
+                                  className="px-2 py-1 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-lg text-xs font-bold min-w-[40px] transition-colors"
+                                >
+                                  {score || "-"}
+                                </button>
+                                {score && (
+                                  <button
+                                    onClick={() => deleteGrade(student.id, assessment.id)}
+                                    className="p-1 text-red-400 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Delete grade"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-[10px] text-slate-500">{score}/{assessment.hps}</div>
+                                <div className={`text-xs font-black ${percentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {percentage}%
+                                </div>
+                                <div className={`text-[10px] font-bold ${percentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {equivalent.toFixed(2)}
+                                </div>
+                                <div className={`text-xs font-black ${percentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {letterGrade}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-center bg-slate-50/50">
+                          <div className="space-y-1">
+                            <div className={`text-lg font-black ${overallPercentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                              {overallPercentage}%
+                            </div>
+                            <div className={`text-xs font-bold ${overallPercentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                              {overallEquivalent.toFixed(2)}
+                            </div>
+                            <div className={`text-sm font-black ${overallPercentage >= 75 ? 'text-green-600' : 'text-red-600'}`}>
+                              {overallLetterGrade}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Grade Editing Modal */}
+        {showGradeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md">
+              <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
+                <h3 className="text-lg font-black text-white uppercase">Edit Grade</h3>
+                <button onClick={() => setShowGradeModal(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              </div>
+              <div className="p-8 space-y-4">
+                {(() => {
+                  const student = students.find(s => s.id === editingGradeData.studentId);
+                  const assessment = assessments.find(a => a.id === editingGradeData.assessmentId);
+                  return (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                      <div className="text-sm font-bold text-slate-800">{student?.name}</div>
+                      <div className="text-xs text-slate-600">{assessment?.title} ({assessment?.category})</div>
+                      <div className="text-xs text-slate-500">HPS: {assessment?.hps} • {assessment?.month} {assessment?.date}</div>
+                    </div>
+                  );
+                })()}
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Score</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={assessments.find(a => a.id === editingGradeData.assessmentId)?.hps || 100}
+                    value={editingGradeData.score}
+                    onChange={e => setEditingGradeData({...editingGradeData, score: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-center"
+                    placeholder="Enter score"
+                  />
+                </div>
+                <button onClick={handleSaveGrade} className="w-full bg-blue-600 text-white font-black uppercase py-4 rounded-2xl">
+                  Save Grade
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Assessment Management
   const renderAssessment = () => (
