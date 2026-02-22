@@ -17,7 +17,7 @@ const generatePinCode = () => {
 const getCurrentYear = () => new Date().getFullYear();
 
 export default function AdminDashboard({ onLogout }) {
-  const [activeTab, setActiveTab] = useState('Grade Entry');
+  const [activeTab, setActiveTab] = useState('Enrollment');
   const [selectedCourseId, setSelectedCourseId] = useState(101);
   const [selectedMonth, setSelectedMonth] = useState('February');
   
