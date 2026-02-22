@@ -2,20 +2,36 @@ import React, { useState, useMemo } from 'react';
 import { 
   LayoutDashboard, BookOpen, Users, UserPlus, FileEdit, 
   Target, ChevronRight, Calendar, Users2, GraduationCap,
-  Download, Save, Filter
+  Download, Save, Filter, X, Plus, Trash2, Edit, Key
 } from 'lucide-react';
+
+// Helper functions for ID and PIN generation
+const generateStudentIdNum = (year, sequence) => {
+  return `${year}-${String(sequence).padStart(4, '0')}`;
+};
+
+const generatePinCode = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit PIN
+};
+
+const getCurrentYear = () => new Date().getFullYear();
 
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('Grade Entry');
   const [selectedCourseId, setSelectedCourseId] = useState(101);
   const [selectedMonth, setSelectedMonth] = useState('February');
-
-  // --- MOCK DATA ---
-  const [students] = useState([
-    { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS" },
-    { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT" },
-    { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH" }
+  
+  // Students management state
+  const [students, setStudents] = useState([
+    { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521" },
+    { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832" },
+    { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012" }
   ]);
+  
+  const [showModal, setShowModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [newStudent, setNewStudent] = useState({ name: '', program: '' });
+  const [studentIdYear, setStudentIdYear] = useState(getCurrentYear());
 
   const [courses] = useState([
     { id: 101, title: "Mathematics 101", code: "MATH101" },
@@ -67,6 +83,40 @@ export default function AdminDashboard({ onLogout }) {
     return entry ? entry.score : "";
   };
 
+  // Student management functions
+  const getNextSequenceNumber = (year) => {
+    const existingStudents = students.filter(s => s.studentIdNum.startsWith(year.toString()));
+    if (existingStudents.length === 0) return 1;
+    const maxSeq = Math.max(...existingStudents.map(s => parseInt(s.studentIdNum.split('-')[1])));
+    return maxSeq + 1;
+  };
+
+  const handleAddStudent = () => {
+    if (!newStudent.name.trim() || !newStudent.program.trim()) return;
+    
+    const sequence = getNextSequenceNumber(studentIdYear);
+    const studentIdNum = generateStudentIdNum(studentIdYear, sequence);
+    const pinCode = generatePinCode();
+    
+    const newStudentData = {
+      id: Date.now(),
+      studentIdNum,
+      name: newStudent.name,
+      program: newStudent.program,
+      pinCode
+    };
+    
+    setStudents([...students, newStudentData]);
+    setNewStudent({ name: '', program: '' });
+    setShowModal(false);
+  };
+
+  const handleDeleteStudent = (id) => {
+    if (window.confirm('Are you sure you want to delete this student?')) {
+      setStudents(students.filter(s => s.id !== id));
+    }
+  };
+
   const renderGradeEntry = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -110,8 +160,8 @@ export default function AdminDashboard({ onLogout }) {
                   <div className="text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Student Info</div>
                 </th>
                 {filteredAssessments.map(a => (
-                  <th key={a.id} className="px-6 py-6 text-center border-r border-slate-800 min-w-[140px]">
-                    <div className="text-[10px] font-black text-blue-400 uppercase mb-1">{a.category}</div>
+                  <th key={a.id} className="px-6 py-6 text-center border-r border-slate-140px]">
+800 min-w-[                    <div className="text-[10px] font-black text-blue-400 uppercase mb-1">{a.category}</div>
                     <div className="text-xs font-black tracking-tight">{a.title}</div>
                     <div className="text-[10px] font-bold text-slate-500 mt-1 italic">HPS: {a.hps}</div>
                   </th>
@@ -171,6 +221,165 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
+  const renderStudents = () => (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Student Registry</h2>
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-1">Manage Student Records</p>
+        </div>
+        
+        <button 
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-600/20 transition-all"
+        >
+          <Plus size={18} />
+          Add New Student
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[32px] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">#</th>
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">ID Number</th>
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Student Name</th>
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Program</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-blue-400 uppercase tracking-[2px]">PIN Code</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student, index) => (
+                <tr key={student.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+                  <td className="px-6 py-4">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{student.studentIdNum}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{student.name}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{student.program}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                      <Key size={14} className="text-amber-500" />
+                      <span className="text-sm font-black text-amber-700">{student.pinCode}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => handleDeleteStudent(student.id)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Student Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">Add New Student</h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              {/* ID Number Preview */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+                <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Generated ID Number</div>
+                <div className="text-2xl font-black text-slate-800">
+                  {generateStudentIdNum(studentIdYear, getNextSequenceNumber(studentIdYear))}
+                </div>
+              </div>
+
+              {/* PIN Code Preview */}
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Generated PIN Code</div>
+                <div className="text-2xl font-black text-amber-700 flex items-center gap-2">
+                  <Key size={24} />
+                  {generatePinCode()}
+                </div>
+              </div>
+
+              {/* Year Selection */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Academic Year</label>
+                <select 
+                  value={studentIdYear}
+                  onChange={(e) => setStudentIdYear(parseInt(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {[2024, 2025, 2026, 2027, 2028].map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Student Name */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Full Name</label>
+                <input 
+                  type="text"
+                  value={newStudent.name}
+                  onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                  placeholder="Last Name, First Name M.I."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Program */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Program</label>
+                <select 
+                  value={newStudent.program}
+                  onChange={(e) => setNewStudent({ ...newStudent, program: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Program</option>
+                  <option value="BSCS">BSCS - Computer Science</option>
+                  <option value="BSIT">BSIT - Information Technology</option>
+                  <option value="BS MATH">BS MATH - Mathematics</option>
+                  <option value="BSBA">BSBA - Business Administration</option>
+                  <option value="BSED">BSED - Education</option>
+                </select>
+              </div>
+
+              {/* Submit Button */}
+              <button 
+                onClick={handleAddStudent}
+                disabled={!newStudent.name.trim() || !newStudent.program.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                Register Student
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-[#f8fafc] text-slate-800 font-sans overflow-hidden">
       <aside className="w-72 bg-[#1e293b] flex flex-col shrink-0 shadow-2xl z-20">
@@ -204,8 +413,13 @@ export default function AdminDashboard({ onLogout }) {
         </header>
         
         <div className="flex-1 overflow-y-auto p-10 bg-slate-50/40">
-          {activeTab === 'Grade Entry' ? renderGradeEntry() : (
-            <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Navigation Mockup</div>
+          {activeTab === 'Grade Entry' && renderGradeEntry()}
+          {activeTab === 'Students' && renderStudents()}
+          {activeTab === 'Dashboard' && (
+            <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Dashboard Coming Soon</div>
+          )}
+          {activeTab === 'Courses' && (
+            <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Courses Coming Soon</div>
           )}
         </div>
       </main>
