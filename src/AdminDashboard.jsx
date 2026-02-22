@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   LayoutDashboard, BookOpen, Users, UserPlus, FileEdit, 
   Target, ChevronRight, Calendar, Users2, GraduationCap,
-  Download, Save, Filter, X, Plus, Trash2, Edit, Key, ClipboardList
+  Download, Save, Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin
 } from 'lucide-react';
 
 // Helper functions for ID and PIN generation
@@ -32,10 +32,16 @@ export default function AdminDashboard({ onLogout }) {
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
   const [studentIdYear, setStudentIdYear] = useState(getCurrentYear());
 
+  // Courses state with scheduling info
   const [courses, setCourses] = useState([
-    { id: 101, title: "Mathematics 101", code: "MATH101" },
-    { id: 102, title: "Computer Science", code: "CS202" }
+    { id: 101, title: "Mathematics 101", code: "MATH101", type: "Lecture", day: "MWF", time: "09:00 - 10:00", room: "Room 301" },
+    { id: 102, title: "Computer Science", code: "CS202", type: "Lab", day: "TTh", time: "13:00 - 15:00", room: "Lab 101" }
   ]);
+
+  // Show course modal
+  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [newCourse, setNewCourse] = useState({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
 
   // Enrollments state
   const [enrollments, setEnrollments] = useState([
@@ -126,6 +132,50 @@ export default function AdminDashboard({ onLogout }) {
       setEnrollments(enrollments.filter(e => e.studentId !== id));
       setGrades(grades.filter(g => g.studentId !== id));
     }
+  };
+
+  // Course management functions
+  const handleAddCourse = () => {
+    if (!newCourse.code.trim() || !newCourse.title.trim() || !newCourse.room.trim()) return;
+    
+    const newCourseData = {
+      id: Date.now(),
+      ...newCourse
+    };
+    
+    setCourses([...courses, newCourseData]);
+    setNewCourse({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
+    setShowCourseModal(false);
+  };
+
+  const handleEditCourse = (course) => {
+    setEditingCourse(course);
+    setNewCourse(course);
+    setShowCourseModal(true);
+  };
+
+  const handleUpdateCourse = () => {
+    if (!newCourse.code.trim() || !newCourse.title.trim() || !newCourse.room.trim()) return;
+    
+    setCourses(courses.map(c => c.id === editingCourse.id ? { ...newCourse, id: editingCourse.id } : c));
+    setEditingCourse(null);
+    setNewCourse({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
+    setShowCourseModal(false);
+  };
+
+  const handleDeleteCourse = (id) => {
+    if (window.confirm('Are you sure you want to delete this course? This will also remove all enrollments and grades for this course.')) {
+      setCourses(courses.filter(c => c.id !== id));
+      setEnrollments(enrollments.filter(e => e.courseId !== id));
+      const courseAssessments = assessments.filter(a => a.courseId === id).map(a => a.id);
+      setGrades(grades.filter(g => !courseAssessments.includes(g.assessmentId)));
+    }
+  };
+
+  const closeCourseModal = () => {
+    setShowCourseModal(false);
+    setEditingCourse(null);
+    setNewCourse({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
   };
 
   // Enrollment functions
@@ -304,6 +354,222 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
+  const renderCourses = () => (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Course Management</h2>
+          <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-1">Manage Course Schedule & Classification</p>
+        </div>
+        
+        <button 
+          onClick={() => setShowCourseModal(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-600/20 transition-all"
+        >
+          <Plus size={18} />
+          Add New Course
+        </button>
+      </div>
+
+      <div className="bg-white rounded-[32px] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-900 text-white">
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">#</th>
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Code</th>
+                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Title</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Type</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Day</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Time</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Room</th>
+                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courses.map((course, index) => (
+                <tr key={course.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+                  <td className="px-6 py-4">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{course.code}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{course.title}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${course.type === 'Lab' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+                      {course.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="text-sm font-bold text-slate-700">{course.day}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock size={14} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-700">{course.time}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <MapPin size={14} className="text-slate-400" />
+                      <span className="text-sm font-bold text-slate-700">{course.room}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => handleEditCourse(course)}
+                        className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCourse(course.id)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add/Edit Course Modal */}
+      {showCourseModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                {editingCourse ? 'Edit Course' : 'Add New Course'}
+              </h3>
+              <button 
+                onClick={closeCourseModal}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-5">
+              {/* Course Code */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Course Code</label>
+                <input 
+                  type="text"
+                  value={newCourse.code}
+                  onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })}
+                  placeholder="e.g., MATH101"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Course Title */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Course Title</label>
+                <input 
+                  type="text"
+                  value={newCourse.title}
+                  onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+                  placeholder="e.g., Mathematics 101"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Course Type */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Classification</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewCourse({ ...newCourse, type: 'Lecture' })}
+                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                      newCourse.type === 'Lecture' 
+                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' 
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    Lecture
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewCourse({ ...newCourse, type: 'Lab' })}
+                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                      newCourse.type === 'Lab' 
+                        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30' 
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    Lab
+                  </button>
+                </div>
+              </div>
+
+              {/* Day */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Day</label>
+                <select 
+                  value={newCourse.day}
+                  onChange={(e) => setNewCourse({ ...newCourse, day: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="MWF">MWF (Mon-Wed-Fri)</option>
+                  <option value="TTh">TTh (Tue-Thu)</option>
+                  <option value="Sat">Saturday</option>
+                  <option value="Mon">Monday</option>
+                  <option value="Tue">Tuesday</option>
+                  <option value="Wed">Wednesday</option>
+                  <option value="Thu">Thursday</option>
+                  <option value="Fri">Friday</option>
+                </select>
+              </div>
+
+              {/* Time */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Time</label>
+                <input 
+                  type="text"
+                  value={newCourse.time}
+                  onChange={(e) => setNewCourse({ ...newCourse, time: e.target.value })}
+                  placeholder="e.g., 09:00 - 10:00"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Room */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Room</label>
+                <input 
+                  type="text"
+                  value={newCourse.room}
+                  onChange={(e) => setNewCourse({ ...newCourse, room: e.target.value })}
+                  placeholder="e.g., Room 301"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button 
+                onClick={editingCourse ? handleUpdateCourse : handleAddCourse}
+                disabled={!newCourse.code.trim() || !newCourse.title.trim() || !newCourse.room.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                {editingCourse ? 'Update Course' : 'Add Course'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderEnrollment = () => {
     // Group enrollments by course
     const enrollmentsByCourse = courses.map(course => {
@@ -347,8 +613,14 @@ export default function AdminDashboard({ onLogout }) {
             <div className="bg-slate-900 px-8 py-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
-                <p className="text-xs text-slate-400">{courseEnrollments.length} enrolled student(s)</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${course.type === 'Lab' ? 'bg-purple-500/30 text-purple-300' : 'bg-green-500/30 text-green-300'}`}>
+                    {course.type}
+                  </span>
+                  <span className="text-xs text-slate-400">{course.day} • {course.time} • {course.room}</span>
+                </div>
               </div>
+              <span className="text-sm font-bold text-slate-400">{courseEnrollments.length} enrolled</span>
             </div>
             
             {courseEnrollments.length === 0 ? (
@@ -436,7 +708,7 @@ export default function AdminDashboard({ onLogout }) {
                   >
                     <option value="">Select Course</option>
                     {courses.map(c => (
-                      <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+                      <option key={c.id} value={c.id}>{c.code} - {c.title} ({c.type})</option>
                     ))}
                   </select>
                 </div>
@@ -508,41 +780,38 @@ export default function AdminDashboard({ onLogout }) {
               </tr>
             </thead>
             <tbody>
-              {students.map((student, index) => {
-                const enrolledCourses = enrollments.filter(e => e.studentId === student.id).length;
-                return (
-                  <tr key={student.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
-                    <td className="px-6 py-4">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-800">{student.studentIdNum}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-800">{student.name}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{student.program}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                        <Key size={14} className="text-amber-500" />
-                        <span className="text-sm font-black text-amber-700">{student.pinCode}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleDeleteStudent(student.id)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {students.map((student, index) => (
+                <tr key={student.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+                  <td className="px-6 py-4">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{student.studentIdNum}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-slate-800">{student.name}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{student.program}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                      <Key size={14} className="text-amber-500" />
+                      <span className="text-sm font-black text-amber-700">{student.pinCode}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => handleDeleteStudent(student.id)}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -675,12 +944,10 @@ export default function AdminDashboard({ onLogout }) {
         <div className="flex-1 overflow-y-auto p-10 bg-slate-50/40">
           {activeTab === 'Grade Entry' && renderGradeEntry()}
           {activeTab === 'Students' && renderStudents()}
+          {activeTab === 'Courses' && renderCourses()}
           {activeTab === 'Enrollment' && renderEnrollment()}
           {activeTab === 'Dashboard' && (
             <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Dashboard Coming Soon</div>
-          )}
-          {activeTab === 'Courses' && (
-            <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Courses Coming Soon</div>
           )}
         </div>
       </main>
