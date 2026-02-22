@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { Key, Mail, GraduationCap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Key, Mail, GraduationCap, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+
+// Admin credentials
+const ADMIN_EMAIL = 'admin@nlac.edu';
+const ADMIN_PASSWORD = 'admin123';
 
 export default function AdminLogin({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Add auth logic here
-    onLogin();
+    setError('');
+    
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      onLogin();
+    } else {
+      setError('Invalid email or password. Please try again.');
+    }
   };
 
   return (
@@ -29,6 +39,13 @@ export default function AdminLogin({ onLogin }) {
             <p className="text-slate-500 text-xs font-bold uppercase tracking-[3px] mt-2">Admin Portal</p>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl flex items-center gap-3">
+              <AlertCircle className="text-red-500 shrink-0" size={18} />
+              <p className="text-red-400 text-xs font-bold">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
@@ -39,7 +56,7 @@ export default function AdminLogin({ onLogin }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  placeholder="admin@academicpro.edu"
+                  placeholder="admin@nlac.edu"
                 />
               </div>
             </div>
