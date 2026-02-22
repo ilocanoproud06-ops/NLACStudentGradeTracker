@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   LayoutDashboard, BookOpen, Users, UserPlus, FileEdit, 
   Target, ChevronRight, Calendar, Users2, GraduationCap,
-  Download, Save, Filter, X, Plus, Trash2, Edit, Key
+  Download, Save, Filter, X, Plus, Trash2, Edit, Key, ClipboardList
 } from 'lucide-react';
 
 // Helper functions for ID and PIN generation
@@ -28,29 +28,37 @@ export default function AdminDashboard({ onLogout }) {
     { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012" }
   ]);
   
-  const [showModal, setShowModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
   const [studentIdYear, setStudentIdYear] = useState(getCurrentYear());
 
-  const [courses] = useState([
+  const [courses, setCourses] = useState([
     { id: 101, title: "Mathematics 101", code: "MATH101" },
     { id: 102, title: "Computer Science", code: "CS202" }
   ]);
 
-  const [enrollments] = useState([
+  // Enrollments state
+  const [enrollments, setEnrollments] = useState([
     { id: 'en-1', studentId: 1, courseId: 101 },
     { id: 'en-2', studentId: 1, courseId: 102 },
     { id: 'en-3', studentId: 2, courseId: 101 },
     { id: 'en-4', studentId: 3, courseId: 101 }
   ]);
 
+  // Show enrollment modal
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+  const [selectedStudentForEnrollment, setSelectedStudentForEnrollment] = useState('');
+  const [selectedCourseForEnrollment, setSelectedCourseForEnrollment] = useState('');
+
   const [assessments] = useState([
     { id: 501, courseId: 101, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100 },
     { id: 502, courseId: 101, category: "Written Exam", title: "Quiz 1", month: "February", hps: 50 },
-    { id: 503, courseId: 101, category: "Performance Task", title: "Seatwork", month: "February", hps: 20 }
+    { id: 503, courseId: 101, category: "Performance Task", title: "Seatwork", month: "February", hps: 20 },
+    { id: 504, courseId: 102, category: "Written Exam", title: "Midterm Exam", month: "February", hps: 100 },
+    { id: 505, courseId: 102, category: "Performance Task", title: "Project", month: "February", hps: 50 }
   ]);
 
+  // Grades state - now initialized when enrollment is created
   const [grades, setGrades] = useState([
     { id: 'g1', studentId: 1, assessmentId: 501, score: 95 },
     { id: 'g2', studentId: 2, assessmentId: 501, score: 88 }
@@ -62,6 +70,7 @@ export default function AdminDashboard({ onLogout }) {
     [assessments, selectedCourseId, selectedMonth]
   );
 
+  // Get students enrolled in the selected course
   const studentsInCourse = useMemo(() => {
     const enrolledIds = enrollments.filter(e => e.courseId === selectedCourseId).map(e => e.studentId);
     return students.filter(s => enrolledIds.includes(s.id));
@@ -108,12 +117,69 @@ export default function AdminDashboard({ onLogout }) {
     
     setStudents([...students, newStudentData]);
     setNewStudent({ name: '', program: '' });
-    setShowModal(false);
+    setShowStudentModal(false);
   };
 
   const handleDeleteStudent = (id) => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
+    if (window.confirm('Are you sure you want to delete this student? This will also remove all enrollments for this student.')) {
       setStudents(students.filter(s => s.id !== id));
+      setEnrollments(enrollments.filter(e => e.studentId !== id));
+      setGrades(grades.filter(g => g.studentId !== id));
+    }
+  };
+
+  // Enrollment functions
+  const getEnrolledStudentsForCourse = (courseId) => {
+    return enrollments.filter(e => e.courseId === courseId).map(e => e.studentId);
+  };
+
+  const getUnenrolledStudents = (courseId) => {
+    const enrolledIds = getEnrolledStudentsForCourse(courseId);
+    return students.filter(s => !enrolledIds.includes(s.id));
+  };
+
+  const handleAddEnrollment = () => {
+    if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
+
+    const studentId = parseInt(selectedStudentForEnrollment);
+    const courseId = parseInt(selectedCourseForEnrollment);
+
+    // Check if already enrolled
+    const existingEnrollment = enrollments.find(e => e.studentId === studentId && e.courseId === courseId);
+    if (existingEnrollment) {
+      alert('This student is already enrolled in this course!');
+      return;
+    }
+
+    // Add enrollment
+    const newEnrollment = {
+      id: `en-${Date.now()}`,
+      studentId,
+      courseId
+    };
+    setEnrollments([...enrollments, newEnrollment]);
+
+    // Initialize grade records for all assessments in this course
+    const courseAssessments = assessments.filter(a => a.courseId === courseId);
+    const newGrades = courseAssessments.map(a => ({
+      id: `g-${Date.now()}-${a.id}`,
+      studentId,
+      assessmentId: a.id,
+      score: "" // Empty placeholder (will show as "-")
+    }));
+    setGrades([...grades, ...newGrades]);
+
+    // Reset modal
+    setSelectedStudentForEnrollment('');
+    setSelectedCourseForEnrollment('');
+    setShowEnrollmentModal(false);
+  };
+
+  const handleRemoveEnrollment = (enrollmentId, studentId, courseId) => {
+    if (window.confirm('Are you sure you want to remove this enrollment? All grades for this student-course pair will be removed.')) {
+      setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
+      setGrades(grades.filter(g => !(g.studentId === studentId && g.assessmentId && 
+        assessments.find(a => a.id === g.assessmentId && a.courseId === courseId))));
     }
   };
 
@@ -151,6 +217,19 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       </div>
 
+      {/* Info Banner */}
+      {studentsInCourse.length === 0 && (
+        <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div className="flex items-center gap-3 text-amber-700">
+            <ClipboardList size={24} />
+            <div>
+              <p className="font-bold">No students enrolled in this course</p>
+              <p className="text-sm">Go to Enrollment tab to add students to this course.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-[32px] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -159,13 +238,17 @@ export default function AdminDashboard({ onLogout }) {
                 <th className="sticky left-0 z-10 bg-slate-900 px-8 py-6 text-left border-r border-slate-800 min-w-[280px]">
                   <div className="text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Student Info</div>
                 </th>
-                {filteredAssessments.map(a => (
-                  <th key={a.id} className="px-6 py-6 text-center border-r border-slate-140px]">
-800 min-w-[                    <div className="text-[10px] font-black text-blue-400 uppercase mb-1">{a.category}</div>
-                    <div className="text-xs font-black tracking-tight">{a.title}</div>
-                    <div className="text-[10px] font-bold text-slate-500 mt-1 italic">HPS: {a.hps}</div>
-                  </th>
-                ))}
+                {filteredAssessments.length === 0 ? (
+                  <th className="px-8 py-6 text-center">No assessments for this month</th>
+                ) : (
+                  filteredAssessments.map(a => (
+                    <th key={a.id} className="px-6 py-6 text-center border-r border-slate-800 min-w-[140px]">
+                      <div className="text-[10px] font-black text-blue-400 uppercase mb-1">{a.category}</div>
+                      <div className="text-xs font-black tracking-tight">{a.title}</div>
+                      <div className="text-[10px] font-bold text-slate-500 mt-1 italic">HPS: {a.hps}</div>
+                    </th>
+                  ))
+                )}
                 <th className="px-8 py-6 text-center bg-indigo-900/50 min-w-[120px]">
                   <div className="text-[10px] font-black text-indigo-300 uppercase">Average</div>
                 </th>
@@ -189,8 +272,8 @@ export default function AdminDashboard({ onLogout }) {
                     </td>
                     {filteredAssessments.map(a => {
                       const score = getScore(student.id, a.id);
-                      if (score !== "") {
-                        totalEarned += score;
+                      if (score !== "" && score !== null) {
+                        totalEarned += parseFloat(score);
                         totalHps += a.hps;
                       }
                       return (
@@ -221,6 +304,179 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
+  const renderEnrollment = () => {
+    // Group enrollments by course
+    const enrollmentsByCourse = courses.map(course => {
+      const courseEnrollments = enrollments.filter(e => e.courseId === course.id);
+      return {
+        course,
+        enrollments: courseEnrollments.map(e => ({
+          ...e,
+          student: students.find(s => s.id === e.studentId)
+        }))
+      };
+    });
+
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Enrollment Management</h2>
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-1">Bridge Between Students and Gradebook</p>
+          </div>
+          
+          <button 
+            onClick={() => setShowEnrollmentModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-600/20 transition-all"
+          >
+            <Plus size={18} />
+            Add Enrollment
+          </button>
+        </div>
+
+        {/* Info Banner */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+          <p className="text-sm text-blue-700 font-medium">
+            <span className="font-bold">Note:</span> Adding an enrollment automatically initializes grade records for that student-course pair. 
+            The student will immediately appear in the Grade Entry spreadsheet.
+          </p>
+        </div>
+
+        {courses.map(({ course, enrollments: courseEnrollments }) => (
+          <div key={course.id} className="bg-white rounded-[32px] shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 px-8 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
+                <p className="text-xs text-slate-400">{courseEnrollments.length} enrolled student(s)</p>
+              </div>
+            </div>
+            
+            {courseEnrollments.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                <p className="font-medium">No students enrolled yet</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">#</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">ID Number</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Student Name</th>
+                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Program</th>
+                      <th className="px-6 py-4 text-center text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseEnrollments.map((enrollment, index) => (
+                      <tr key={enrollment.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+                        <td className="px-6 py-4">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-bold text-slate-800">{enrollment.student?.studentIdNum}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-bold text-slate-800">{enrollment.student?.name}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{enrollment.student?.program}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center">
+                            <button 
+                              onClick={() => handleRemoveEnrollment(enrollment.id, enrollment.studentId, course.id)}
+                              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Add Enrollment Modal */}
+        {showEnrollmentModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">Add Enrollment</h3>
+                <button 
+                  onClick={() => setShowEnrollmentModal(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-8 space-y-6">
+                {/* Info */}
+                <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
+                  <p className="text-sm text-green-700 font-medium">
+                    Adding an enrollment will automatically create grade placeholders for all assessments in the selected course.
+                  </p>
+                </div>
+
+                {/* Course Selection */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Select Course</label>
+                  <select 
+                    value={selectedCourseForEnrollment}
+                    onChange={(e) => {
+                      setSelectedCourseForEnrollment(e.target.value);
+                      setSelectedStudentForEnrollment('');
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Course</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Student Selection */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Select Student</label>
+                  <select 
+                    value={selectedStudentForEnrollment}
+                    onChange={(e) => setSelectedStudentForEnrollment(e.target.value)}
+                    disabled={!selectedCourseForEnrollment}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <option value="">Select Student</option>
+                    {selectedCourseForEnrollment && getUnenrolledStudents(parseInt(selectedCourseForEnrollment)).map(s => (
+                      <option key={s.id} value={s.id}>{s.studentIdNum} - {s.name}</option>
+                    ))}
+                    {selectedCourseForEnrollment && getUnenrolledStudents(parseInt(selectedCourseForEnrollment)).length === 0 && (
+                      <option disabled>All students already enrolled</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Submit Button */}
+                <button 
+                  onClick={handleAddEnrollment}
+                  disabled={!selectedStudentForEnrollment || !selectedCourseForEnrollment}
+                  className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus size={18} />
+                  Enroll Student
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderStudents = () => (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -230,7 +486,7 @@ export default function AdminDashboard({ onLogout }) {
         </div>
         
         <button 
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowStudentModal(true)}
           className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-blue-600/20 transition-all"
         >
           <Plus size={18} />
@@ -252,51 +508,54 @@ export default function AdminDashboard({ onLogout }) {
               </tr>
             </thead>
             <tbody>
-              {students.map((student, index) => (
-                <tr key={student.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
-                  <td className="px-6 py-4">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-slate-800">{student.studentIdNum}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-slate-800">{student.name}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{student.program}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                      <Key size={14} className="text-amber-500" />
-                      <span className="text-sm font-black text-amber-700">{student.pinCode}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => handleDeleteStudent(student.id)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {students.map((student, index) => {
+                const enrolledCourses = enrollments.filter(e => e.studentId === student.id).length;
+                return (
+                  <tr key={student.id} className="group hover:bg-blue-50/30 transition-colors border-b border-slate-100">
+                    <td className="px-6 py-4">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">{index + 1}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-bold text-slate-800">{student.studentIdNum}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-bold text-slate-800">{student.name}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-black text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full">{student.program}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                        <Key size={14} className="text-amber-500" />
+                        <span className="text-sm font-black text-amber-700">{student.pinCode}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => handleDeleteStudent(student.id)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Add Student Modal */}
-      {showModal && (
+      {showStudentModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
               <h3 className="text-lg font-black text-white uppercase tracking-tight">Add New Student</h3>
               <button 
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowStudentModal(false)}
                 className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-xl transition-all"
               >
                 <X size={20} />
@@ -392,6 +651,7 @@ export default function AdminDashboard({ onLogout }) {
           <NavItem icon={<Users size={20}/>} label="Students" active={activeTab === 'Students'} onClick={() => setActiveTab('Students')} />
           <NavItem icon={<BookOpen size={20}/>} label="Courses" active={activeTab === 'Courses'} onClick={() => setActiveTab('Courses')} />
           <div className="pt-8 pb-2 px-4"><span className="text-[10px] font-black text-slate-500 uppercase tracking-[2px]">Grade Portal</span></div>
+          <NavItem icon={<ClipboardList size={20}/>} label="Enrollment" active={activeTab === 'Enrollment'} onClick={() => setActiveTab('Enrollment')} />
           <NavItem icon={<FileEdit size={20}/>} label="Grade Entry" active={activeTab === 'Grade Entry'} onClick={() => setActiveTab('Grade Entry')} />
           <button 
             onClick={onLogout}
@@ -415,6 +675,7 @@ export default function AdminDashboard({ onLogout }) {
         <div className="flex-1 overflow-y-auto p-10 bg-slate-50/40">
           {activeTab === 'Grade Entry' && renderGradeEntry()}
           {activeTab === 'Students' && renderStudents()}
+          {activeTab === 'Enrollment' && renderEnrollment()}
           {activeTab === 'Dashboard' && (
             <div className="p-20 text-center text-slate-300 italic font-black text-2xl uppercase tracking-widest opacity-20">Dashboard Coming Soon</div>
           )}
