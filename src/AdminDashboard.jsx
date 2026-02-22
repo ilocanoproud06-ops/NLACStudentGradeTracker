@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   LayoutDashboard, BookOpen, Users, FileEdit, ChevronRight, Calendar, GraduationCap,
-  Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin, FileText
+  Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin, FileText, Save
 } from 'lucide-react';
 
 // Helper functions
@@ -192,6 +192,15 @@ export default function AdminDashboard({ onLogout }) {
     }
   };
 
+  const handleSaveCourses = () => {
+    // Force save to localStorage and show confirmation
+    saveToStorage('nlac_courses', courses);
+    saveToStorage('nlac_enrollments', enrollments);
+    
+    // Show success message
+    alert(`✅ Course data saved successfully!\n\nCourses: ${courses.length}\nEnrollments: ${enrollments.length}\n\nAll changes have been saved to the database.`);
+  };
+
   const handleAddEnrollment = () => {
     if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
     const studentId = parseInt(selectedStudentForEnrollment);
@@ -261,6 +270,34 @@ export default function AdminDashboard({ onLogout }) {
     
     setHpsUpdates({});
     setShowHPSModal(false);
+  };
+
+  const handleSaveHPS = () => {
+    // Force save to localStorage and show confirmation
+    saveToStorage('nlac_assessments', assessments);
+    saveToStorage('nlac_grades', grades);
+    
+    // Show success message
+    alert(`✅ HPS data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll HPS changes have been saved to the database.`);
+  };
+
+  const handleSaveAssessments = () => {
+    // Force save to localStorage and show confirmation
+    saveToStorage('nlac_assessments', assessments);
+    saveToStorage('nlac_grades', grades);
+    
+    // Show success message
+    alert(`✅ Assessment data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll assessment changes have been saved to the database.`);
+  };
+
+  const handleSaveStudents = () => {
+    // Force save to localStorage and show confirmation
+    saveToStorage('nlac_students', students);
+    saveToStorage('nlac_enrollments', enrollments);
+    saveToStorage('nlac_grades', grades);
+    
+    // Show success message
+    alert(`✅ Student data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll student changes have been saved to the database.`);
   };
 
   // Render functions
@@ -361,9 +398,14 @@ export default function AdminDashboard({ onLogout }) {
           <h2 className="text-2xl font-black text-slate-800">Student Registry</h2>
           <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Manage Student Records</p>
         </div>
-        <button onClick={() => setShowStudentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
-          <Plus size={18} /> Add Student
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleSaveStudents} className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-2xl transition-colors">
+            <Save size={18} /> Save Students
+          </button>
+          <button onClick={() => setShowStudentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
+            <Plus size={18} /> Add Student
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
@@ -444,9 +486,18 @@ export default function AdminDashboard({ onLogout }) {
           <h2 className="text-2xl font-black text-slate-800">Course Management</h2>
           <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Manage Courses & Schedule</p>
         </div>
-        <button onClick={() => setShowCourseModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
-          <Plus size={18} /> Add Course
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleSaveCourses} className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-2xl transition-colors">
+            <Save size={18} /> Save Changes
+          </button>
+          <button onClick={() => setShowCourseModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
+            <Plus size={18} /> Add Course
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
+        <p className="text-sm text-green-700">All course changes are automatically saved to the database. Use "Save Changes" to confirm bulk operations or view save status.</p>
       </div>
 
       <div className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
@@ -586,9 +637,14 @@ export default function AdminDashboard({ onLogout }) {
           <h2 className="text-2xl font-black text-slate-800">Assessment Management</h2>
           <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Create and Manage Assessments</p>
         </div>
-        <button onClick={() => setShowAssessmentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
-          <Plus size={18} /> Add Assessment
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleSaveAssessments} className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-2xl transition-colors">
+            <Save size={18} /> Save Assessments
+          </button>
+          <button onClick={() => setShowAssessmentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
+            <Plus size={18} /> Add Assessment
+          </button>
+        </div>
       </div>
 
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
@@ -660,9 +716,14 @@ export default function AdminDashboard({ onLogout }) {
           <h2 className="text-2xl font-black text-slate-800">HPS Entry Management</h2>
           <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Update Highest Possible Scores</p>
         </div>
-        <button onClick={() => setShowHPSModal(true)} className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-bold text-sm rounded-2xl">
-          <Key size={18} /> Update HPS
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleSaveHPS} className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-2xl transition-colors">
+            <Save size={18} /> Save HPS Changes
+          </button>
+          <button onClick={() => setShowHPSModal(true)} className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-bold text-sm rounded-2xl">
+            <Key size={18} /> Update HPS
+          </button>
+        </div>
       </div>
 
       <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
