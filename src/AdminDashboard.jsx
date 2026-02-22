@@ -29,11 +29,11 @@ const initialEnrollments = [
 ];
 
 const initialAssessments = [
-  { id: 501, courseId: 101, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-15" },
-  { id: 502, courseId: 101, category: "Written Exam", title: "Quiz 1", month: "February", hps: 50, date: "2024-02-20" },
-  { id: 503, courseId: 101, category: "Performance Task", title: "Seatwork", month: "February", hps: 20, date: "2024-02-22" },
-  { id: 504, courseId: 102, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-16" },
-  { id: 505, courseId: 102, category: "Performance Task", title: "Lab Exercise 1", month: "February", hps: 50, date: "2024-02-21" }
+  { id: 501, courseId: 101, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-15", instructorComments: "Covers chapters 1-3, focus on basic concepts" },
+  { id: 502, courseId: 101, category: "Written Exam", title: "Quiz 1", month: "February", hps: 50, date: "2024-02-20", instructorComments: "Short quiz on algebraic equations" },
+  { id: 503, courseId: 101, category: "Performance Task", title: "Seatwork", month: "February", hps: 20, date: "2024-02-22", instructorComments: "Daily practice exercises" },
+  { id: 504, courseId: 102, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-16", instructorComments: "Programming fundamentals and algorithms" },
+  { id: 505, courseId: 102, category: "Performance Task", title: "Lab Exercise 1", month: "February", hps: 50, date: "2024-02-21", instructorComments: "Basic programming lab assignment" }
 ];
 
 const initialGrades = [
@@ -78,7 +78,10 @@ export default function AdminDashboard({ onLogout }) {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [showHPSModal, setShowHPSModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
+  const [editingAssessment, setEditingAssessment] = useState(null);
 
   // Form states
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
@@ -86,6 +89,16 @@ export default function AdminDashboard({ onLogout }) {
   const [newCourse, setNewCourse] = useState({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
   const [selectedStudentForEnrollment, setSelectedStudentForEnrollment] = useState('');
   const [selectedCourseForEnrollment, setSelectedCourseForEnrollment] = useState('');
+  const [newAssessment, setNewAssessment] = useState({ 
+    courseId: '', 
+    category: 'Written Exam', 
+    title: '', 
+    month: 'February', 
+    hps: 100, 
+    date: '', 
+    instructorComments: '' 
+  });
+  const [hpsUpdates, setHpsUpdates] = useState({});
 
   // Computed values
   const filteredAssessments = useMemo(() => 
@@ -210,6 +223,44 @@ export default function AdminDashboard({ onLogout }) {
     if (window.confirm('Remove this enrollment?')) {
       setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
     }
+  };
+
+  // Assessment handlers
+  const handleAddAssessment = () => {
+    if (!newAssessment.title.trim() || !newAssessment.courseId) return;
+    
+    const assessmentData = {
+      id: Date.now(),
+      courseId: parseInt(newAssessment.courseId),
+      category: newAssessment.category,
+      title: newAssessment.title,
+      month: newAssessment.month,
+      hps: parseInt(newAssessment.hps),
+      date: newAssessment.date,
+      instructorComments: newAssessment.instructorComments
+    };
+
+    if (editingAssessment) {
+      setAssessments(assessments.map(a => a.id === editingAssessment.id ? { ...assessmentData, id: editingAssessment.id } : a));
+    } else {
+      setAssessments([...assessments, assessmentData]);
+    }
+
+    setNewAssessment({ courseId: '', category: 'Written Exam', title: '', month: 'February', hps: 100, date: '', instructorComments: '' });
+    setEditingAssessment(null);
+    setShowAssessmentModal(false);
+  };
+
+  const handleUpdateHPS = () => {
+    if (Object.keys(hpsUpdates).length === 0) return;
+    
+    setAssessments(assessments.map(a => ({
+      ...a,
+      hps: hpsUpdates[a.id] !== undefined ? hpsUpdates[a.id] : a.hps
+    })));
+    
+    setHpsUpdates({});
+    setShowHPSModal(false);
   };
 
   // Render functions
@@ -527,6 +578,154 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
+  // Assessment Management
+  const renderAssessment = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800">Assessment Management</h2>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Create and Manage Assessments</p>
+        </div>
+        <button onClick={() => setShowAssessmentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
+          <Plus size={18} /> Add Assessment
+        </button>
+      </div>
+
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+        <p className="text-sm text-blue-700">Assessments are automatically linked to grade entry. Changes here will reflect in the Grade Entry section.</p>
+      </div>
+
+      {courses.map(course => {
+        const courseAssessments = assessments.filter(a => a.courseId === course.id);
+        const monthlyCount = courseAssessments.reduce((acc, a) => {
+          acc[a.month] = (acc[a.month] || 0) + 1;
+          return acc;
+        }, {});
+
+        return (
+          <div key={course.id} className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 px-8 py-4">
+              <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
+              <p className="text-xs text-slate-400">{courseAssessments.length} assessments • {Object.keys(monthlyCount).length} months</p>
+            </div>
+            
+            {courseAssessments.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">No assessments created</div>
+            ) : (
+              <div className="p-6 space-y-4">
+                {courseAssessments.map(assessment => (
+                  <div key={assessment.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-black text-slate-800">{assessment.title}</h4>
+                        <p className="text-sm text-slate-600">{assessment.category} • {assessment.month} {assessment.date}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-black text-blue-600">HPS: {assessment.hps}</div>
+                        <button onClick={() => { 
+                          setEditingAssessment(assessment); 
+                          setNewAssessment({
+                            courseId: assessment.courseId.toString(),
+                            category: assessment.category,
+                            title: assessment.title,
+                            month: assessment.month,
+                            hps: assessment.hps,
+                            date: assessment.date,
+                            instructorComments: assessment.instructorComments || ''
+                          });
+                          setShowAssessmentModal(true); 
+                        }} className="text-xs text-blue-500 hover:text-blue-700 font-bold">Edit</button>
+                      </div>
+                    </div>
+                    {assessment.instructorComments && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-3">
+                        <p className="text-sm text-slate-700 italic">"{assessment.instructorComments}"</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // HPS Entry Management
+  const renderHPSEntry = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800">HPS Entry Management</h2>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Update Highest Possible Scores</p>
+        </div>
+        <button onClick={() => setShowHPSModal(true)} className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-bold text-sm rounded-2xl">
+          <Key size={18} /> Update HPS
+        </button>
+      </div>
+
+      <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
+        <p className="text-sm text-green-700">HPS changes are automatically reflected in grade calculations and student dashboards.</p>
+      </div>
+
+      {courses.map(course => {
+        const courseAssessments = assessments.filter(a => a.courseId === course.id);
+        
+        return (
+          <div key={course.id} className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 px-8 py-4">
+              <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
+              <p className="text-xs text-slate-400">{courseAssessments.length} assessments</p>
+            </div>
+            
+            {courseAssessments.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">No assessments available</div>
+            ) : (
+              <div className="p-6">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase">Assessment</th>
+                      <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase">Category</th>
+                      <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase">Month</th>
+                      <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase">Current HPS</th>
+                      <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase">New HPS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courseAssessments.map(assessment => (
+                      <tr key={assessment.id} className="border-b border-slate-100">
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-800">{assessment.title}</div>
+                          <div className="text-xs text-slate-500">{assessment.date}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{assessment.category}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{assessment.month}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg font-bold text-blue-700">{assessment.hps}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input 
+                            type="number" 
+                            min="1"
+                            value={hpsUpdates[assessment.id] || assessment.hps}
+                            onChange={e => setHpsUpdates({...hpsUpdates, [assessment.id]: parseInt(e.target.value) || assessment.hps})}
+                            className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-center font-bold"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-[#f8fafc]">
       <aside className="w-72 bg-[#1e293b] flex flex-col">
@@ -544,8 +743,11 @@ export default function AdminDashboard({ onLogout }) {
           <button onClick={() => setActiveTab('Courses')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Courses' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
             <BookOpen size={20} /> Courses
           </button>
-          <button onClick={() => setActiveTab('Grade Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Grade Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
-            <FileEdit size={20} /> Grade Entry
+          <button onClick={() => setActiveTab('Assessment')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Assessment' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
+            <FileText size={20} /> Assessment
+          </button>
+          <button onClick={() => setActiveTab('HPS Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'HPS Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
+            <Key size={20} /> HPS Entry
           </button>
           <button onClick={onLogout} className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-500 hover:text-red-400 mt-10">
             Logout
@@ -566,9 +768,154 @@ export default function AdminDashboard({ onLogout }) {
           {activeTab === 'Enrollment' && renderEnrollment()}
           {activeTab === 'Students' && renderStudents()}
           {activeTab === 'Courses' && renderCourses()}
+          {activeTab === 'Assessment' && renderAssessment()}
+          {activeTab === 'HPS Entry' && renderHPSEntry()}
           {activeTab === 'Grade Entry' && renderGradeEntry()}
         </div>
       </main>
+
+      {/* Assessment Modal */}
+      {showAssessmentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg">
+            <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
+              <h3 className="text-lg font-black text-white uppercase">{editingAssessment ? 'Edit Assessment' : 'Add Assessment'}</h3>
+              <button onClick={() => { setShowAssessmentModal(false); setEditingAssessment(null); }} className="text-slate-400 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="p-8 space-y-4">
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Course</label>
+                <select 
+                  value={newAssessment.courseId} 
+                  onChange={e => setNewAssessment({...newAssessment, courseId: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold"
+                >
+                  <option value="">Select Course</option>
+                  {courses.map(c => <option key={c.id} value={c.id}>{c.code} - {c.title}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Assessment Type</label>
+                <select 
+                  value={newAssessment.category} 
+                  onChange={e => setNewAssessment({...newAssessment, category: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold"
+                >
+                  <option value="Written Exam">Written Exam</option>
+                  <option value="Performance Task">Performance Task</option>
+                  <option value="Quarterly Exam">Quarterly Exam</option>
+                  <option value="Project">Project</option>
+                  <option value="Lab Exercise">Lab Exercise</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Title</label>
+                <input 
+                  type="text" 
+                  value={newAssessment.title} 
+                  onChange={e => setNewAssessment({...newAssessment, title: e.target.value})}
+                  placeholder="e.g., Prelim Exam, Quiz 1" 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Month</label>
+                  <select 
+                    value={newAssessment.month} 
+                    onChange={e => setNewAssessment({...newAssessment, month: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold"
+                  >
+                    {["January","February","March","April","May","June","July","August","September","October","November","December"].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-black text-slate-400 uppercase mb-2 block">HPS</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={newAssessment.hps} 
+                    onChange={e => setNewAssessment({...newAssessment, hps: parseInt(e.target.value) || 100})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Date</label>
+                <input 
+                  type="date" 
+                  value={newAssessment.date} 
+                  onChange={e => setNewAssessment({...newAssessment, date: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold" 
+                />
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Instructor Comments</label>
+                <textarea 
+                  value={newAssessment.instructorComments} 
+                  onChange={e => setNewAssessment({...newAssessment, instructorComments: e.target.value})}
+                  placeholder="Optional comments about the assessment..." 
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold resize-none" 
+                />
+              </div>
+              <button 
+                onClick={handleAddAssessment} 
+                disabled={!newAssessment.title.trim() || !newAssessment.courseId}
+                className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl"
+              >
+                {editingAssessment ? 'Update Assessment' : 'Create Assessment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HPS Update Modal */}
+      {showHPSModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md">
+            <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
+              <h3 className="text-lg font-black text-white uppercase">Update HPS Values</h3>
+              <button onClick={() => setShowHPSModal(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="p-8 space-y-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
+                <p className="text-sm text-green-700">Review the HPS values below and update as needed. Changes will be applied to all assessments.</p>
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {assessments.map(assessment => {
+                  const course = courses.find(c => c.id === assessment.courseId);
+                  return (
+                    <div key={assessment.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                      <div>
+                        <div className="font-bold text-sm">{assessment.title}</div>
+                        <div className="text-xs text-slate-500">{course?.code} • {assessment.category}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Current: {assessment.hps}</span>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={hpsUpdates[assessment.id] || assessment.hps}
+                          onChange={e => setHpsUpdates({...hpsUpdates, [assessment.id]: parseInt(e.target.value) || assessment.hps})}
+                          className="w-16 px-2 py-1 bg-white border border-slate-200 rounded text-center font-bold text-sm"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button 
+                onClick={handleUpdateHPS}
+                className="w-full bg-green-600 text-white font-black uppercase py-4 rounded-2xl"
+              >
+                Update All HPS Values
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
