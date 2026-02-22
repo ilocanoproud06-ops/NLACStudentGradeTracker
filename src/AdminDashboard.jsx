@@ -989,6 +989,9 @@ export default function AdminDashboard({ onLogout }) {
           <button onClick={() => setActiveTab('Assessment')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Assessment' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
             <FileText size={20} /> Assessment
           </button>
+          <button onClick={() => setActiveTab('Grade Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Grade Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
+            <FileEdit size={20} /> Grade Entry
+          </button>
           <button onClick={() => setActiveTab('HPS Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'HPS Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
             <Key size={20} /> HPS Entry
           </button>
