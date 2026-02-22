@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Key, Mail, GraduationCap, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Key, Mail, GraduationCap, ArrowRight, ShieldCheck, AlertCircle, ChevronLeft } from 'lucide-react';
 
 // Admin credentials
 const ADMIN_EMAIL = 'admin@nlac.edu';
 const ADMIN_PASSWORD = 'admin123';
 
-export default function AdminLogin({ onLogin }) {
+export default function AdminLogin({ onLogin, onBack }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,6 +28,14 @@ export default function AdminLogin({ onLogin }) {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px]" />
 
       <div className="w-full max-w-md z-10">
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 text-slate-400 hover:text-white mb-6 ml-2"
+        >
+          <ChevronLeft size={18} />
+          <span className="text-sm font-bold">Back to Welcome</span>
+        </button>
+
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-10 rounded-[40px] shadow-2xl">
           <div className="flex flex-col items-center mb-10">
             <div className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-500/40 mb-6">
