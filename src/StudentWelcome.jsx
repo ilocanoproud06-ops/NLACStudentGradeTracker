@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, ArrowRight, Award, BookOpen, ClipboardList, Percent, ChevronLeft } from 'lucide-react';
+import { GraduationCap, ArrowRight, Award, BookOpen, ClipboardList, Percent, ChevronLeft, Shield } from 'lucide-react';
 
 export default function StudentWelcome({ onEnter, onBack }) {
   return (
@@ -28,7 +28,7 @@ export default function StudentWelcome({ onEnter, onBack }) {
               Student<span className="text-emerald-400">Portal</span>
             </h1>
             <p className="text-slate-500 text-sm font-medium mt-3 text-center">
-              Access your grades, track your academic performance, and manage your profile
+              Secure access to your academic records and performance data
             </p>
           </div>
 
@@ -67,10 +67,14 @@ export default function StudentWelcome({ onEnter, onBack }) {
             </div>
           </div>
 
-          {/* Credentials Info */}
+          {/* Security Notice */}
           <div className="bg-slate-800/30 border border-slate-700 rounded-2xl p-4 mb-8">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Shield className="text-emerald-400 w-4 h-4" />
+              <span className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Secure Login Required</span>
+            </div>
             <p className="text-slate-400 text-xs text-center">
-              <span className="text-emerald-400 font-bold">Login Credentials:</span> Get your ID Number and PIN from your administrator
+              Your student ID number and PIN are required for access. Contact your administrator if you need assistance.
             </p>
           </div>
 
@@ -84,9 +88,15 @@ export default function StudentWelcome({ onEnter, onBack }) {
           </button>
         </div>
         
-        <p className="text-center mt-8 text-slate-600 text-xs font-medium">
-          © 2026 AcademicPro Systems. All rights reserved.
-        </p>
+        <div className="mt-8 text-center">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4">
+            <p className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">Privacy Notice</p>
+            <p className="text-slate-400 text-xs">Your personal information is protected. Use your credentials responsibly.</p>
+          </div>
+          <p className="text-slate-600 text-xs font-medium">
+            © 2026 AcademicPro Systems. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );

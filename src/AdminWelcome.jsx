@@ -28,7 +28,7 @@ export default function AdminWelcome({ onEnter, onBack }) {
               Admin<span className="text-blue-400">Portal</span>
             </h1>
             <p className="text-slate-500 text-sm font-medium mt-3 text-center">
-              Secure access for administrators to manage student records and grades
+              Secure administrative access for authorized personnel only
             </p>
           </div>
 
@@ -67,10 +67,14 @@ export default function AdminWelcome({ onEnter, onBack }) {
             </div>
           </div>
 
-          {/* Credentials Info */}
+          {/* Security Notice */}
           <div className="bg-slate-800/30 border border-slate-700 rounded-2xl p-4 mb-8">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Shield className="text-blue-400 w-4 h-4" />
+              <span className="text-blue-400 font-bold text-xs uppercase tracking-widest">Secure Access Required</span>
+            </div>
             <p className="text-slate-400 text-xs text-center">
-              <span className="text-blue-400 font-bold">Admin Credentials:</span> admin@nlac.edu / admin123
+              Administrator credentials are required for access. Contact system administrator for login details.
             </p>
           </div>
 
@@ -84,9 +88,15 @@ export default function AdminWelcome({ onEnter, onBack }) {
           </button>
         </div>
         
-        <p className="text-center mt-8 text-slate-600 text-xs font-medium">
-          © 2026 AcademicPro Systems. All rights reserved.
-        </p>
+        <div className="mt-8 text-center">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4">
+            <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-1">Security Notice</p>
+            <p className="text-slate-400 text-xs">Unauthorized access is prohibited. All activities are monitored and logged.</p>
+          </div>
+          <p className="text-slate-600 text-xs font-medium">
+            © 2026 AcademicPro Systems. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   );
