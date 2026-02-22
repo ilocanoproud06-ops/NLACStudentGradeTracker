@@ -355,6 +355,16 @@ export default function AdminDashboard({ onLogout }) {
     alert(`✅ Student data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll student changes have been saved to the database.`);
   };
 
+  const handleSaveEnrollments = () => {
+    // Force save to localStorage and show confirmation
+    saveToStorage('nlac_students', students);
+    saveToStorage('nlac_enrollments', enrollments);
+    saveToStorage('nlac_grades', grades);
+    
+    // Show success message
+    alert(`✅ Enrollment data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll enrollment changes have been saved to the database.`);
+  };
+
   // Grade editing handlers
   const openGradeModal = (studentId, assessmentId) => {
     const score = getScore(studentId, assessmentId);
@@ -377,9 +387,14 @@ export default function AdminDashboard({ onLogout }) {
           <h2 className="text-2xl font-black text-slate-800">Enrollment Management</h2>
           <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">Enroll Students in Courses</p>
         </div>
-        <button onClick={() => setShowEnrollmentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
-          <Plus size={18} /> Add Enrollment
-        </button>
+        <div className="flex gap-3">
+          <button onClick={handleSaveEnrollments} className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold text-sm rounded-2xl transition-colors">
+            <Save size={18} /> Save Enrollments
+          </button>
+          <button onClick={() => setShowEnrollmentModal(true)} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold text-sm rounded-2xl">
+            <Plus size={18} /> Add Enrollment
+          </button>
+        </div>
       </div>
 
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
