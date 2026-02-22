@@ -74,6 +74,13 @@ export default function AdminDashboard({ onLogout }) {
   useEffect(() => { saveToStorage('nlac_assessments', assessments); }, [assessments]);
   useEffect(() => { saveToStorage('nlac_grades', grades); }, [grades]);
 
+  // Auto-expand Assessment submenu when active
+  useEffect(() => {
+    if (activeTab === 'Assessment' || activeTab === 'Grade Entry') {
+      setShowAssessmentSubmenu(true);
+    }
+  }, [activeTab]);
+
   // Modal states
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showCourseModal, setShowCourseModal] = useState(false);
@@ -83,7 +90,7 @@ export default function AdminDashboard({ onLogout }) {
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingAssessment, setEditingAssessment] = useState(null);
-  const [editingGrade, setEditingGrade] = useState(null);
+  const [showAssessmentSubmenu, setShowAssessmentSubmenu] = useState(false);
 
   // Form states
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
@@ -986,12 +993,22 @@ export default function AdminDashboard({ onLogout }) {
           <button onClick={() => setActiveTab('Courses')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Courses' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
             <BookOpen size={20} /> Courses
           </button>
-          <button onClick={() => setActiveTab('Assessment')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Assessment' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
-            <FileText size={20} /> Assessment
-          </button>
-          <button onClick={() => setActiveTab('Grade Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Grade Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
-            <FileEdit size={20} /> Grade Entry
-          </button>
+          <div className="space-y-1">
+            <button onClick={() => setShowAssessmentSubmenu(!showAssessmentSubmenu)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'Assessment' || activeTab === 'Grade Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
+              <FileText size={20} /> Assessment
+              <ChevronRight size={16} className={`ml-auto transition-transform ${showAssessmentSubmenu ? 'rotate-90' : ''}`} />
+            </button>
+            {showAssessmentSubmenu && (
+              <div className="ml-6 space-y-1">
+                <button onClick={() => setActiveTab('Assessment')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm ${activeTab === 'Assessment' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-600/50'}`}>
+                  <FileText size={16} /> Management
+                </button>
+                <button onClick={() => setActiveTab('Grade Entry')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm ${activeTab === 'Grade Entry' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-600/50'}`}>
+                  <FileEdit size={16} /> Grade Entry
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={() => setActiveTab('HPS Entry')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'HPS Entry' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
             <Key size={20} /> HPS Entry
           </button>
