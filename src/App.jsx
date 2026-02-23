@@ -11,6 +11,42 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false); // Show welcome page
   const [studentData, setStudentData] = useState(null);
+  const [isStudentOnlyMode, setIsStudentOnlyMode] = useState(false);
+  const [isSecureStudentAccess, setIsSecureStudentAccess] = useState(false);
+
+  // Check if we're in student-only mode (accessed via student URL)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentPath = window.location.pathname;
+    const studentId = urlParams.get('student');
+
+    // Handle redirect from secure student portal
+    if (studentId) {
+      const students = JSON.parse(localStorage.getItem('nlac_students') || '[]');
+      const student = students.find(s => s.id.toString() === studentId);
+      if (student) {
+        setUserType('student');
+        setStudentData(student);
+        setIsAuthenticated(true);
+        setShowWelcome(false);
+        setIsSecureStudentAccess(urlParams.get('secure') === 'true');
+        // Clean up the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      return;
+    }
+
+    const isStudentMode = urlParams.get('mode') === 'student' ||
+                         currentPath.includes('/student') ||
+                         currentPath.includes('student.html') ||
+                         window.location.hostname.includes('student');
+
+    if (isStudentMode) {
+      setIsStudentOnlyMode(true);
+      setUserType('student');
+      setShowWelcome(true);
+    }
+  }, []);
 
   const handleAdminLogin = () => {
     setUserType('admin');
@@ -26,14 +62,20 @@ function App() {
   };
 
   const handleLogout = () => {
+    if (isSecureStudentAccess) {
+      // For secure student access, redirect back to the secure portal
+      window.location.href = './student-access.html';
+      return;
+    }
     setUserType(null);
     setIsAuthenticated(false);
     setStudentData(null);
     setShowWelcome(false);
+    setIsSecureStudentAccess(false);
   };
 
-  // Portal Selection Screen
-  if (!isAuthenticated && userType === null) {
+  // Portal Selection Screen (only show if not in student-only mode and not secure student access)
+  if (!isAuthenticated && userType === null && !isStudentOnlyMode && !isSecureStudentAccess) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 relative overflow-hidden">
         {/* Decorative Background Elements */}

@@ -6,11 +6,16 @@
   "homepage": "https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/",
   "scripts": {
     "dev": "vite",
+    "dev:student": "vite --open student.html",
     "build": "vite build",
+    "build:student": "vite build",
     "preview": "vite preview",
+    "preview:student": "vite preview --open student.html",
     "predeploy": "vite build",
     "deploy": "gh-pages -d dist",
-    "deploy:firebase": "vite build && firebase deploy"
+    "deploy:student": "vite build && gh-pages -d dist -e student",
+    "deploy:firebase": "vite build && firebase deploy",
+    "deploy:student:firebase": "vite build && firebase deploy --only hosting:student"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",

@@ -91,6 +91,7 @@ export default function AdminDashboard({ onLogout }) {
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingAssessment, setEditingAssessment] = useState(null);
   const [showAssessmentSubmenu, setShowAssessmentSubmenu] = useState(false);
+  const [assessmentFilters, setAssessmentFilters] = useState({});
 
   // Form states
   const [newStudent, setNewStudent] = useState({ name: '', program: '' });
@@ -377,6 +378,13 @@ export default function AdminDashboard({ onLogout }) {
     updateGrade(studentId, assessmentId, score);
     setShowGradeModal(false);
     setEditingGradeData({ studentId: '', assessmentId: '', score: '' });
+  };
+
+  const handleDeleteAssessment = (assessmentId) => {
+    if (window.confirm('Delete this assessment? This will also remove all associated grades.')) {
+      setAssessments(assessments.filter(a => a.id !== assessmentId));
+      setGrades(grades.filter(g => g.assessmentId !== assessmentId));
+    }
   };
 
   // Render functions
@@ -833,7 +841,7 @@ export default function AdminDashboard({ onLogout }) {
     );
   };
 
-  // Assessment Management
+  // Assessment Management - Updated with delete icons
   const renderAssessment = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -857,44 +865,73 @@ export default function AdminDashboard({ onLogout }) {
 
       {courses.map(course => {
         const courseAssessments = assessments.filter(a => a.courseId === course.id);
-        const monthlyCount = courseAssessments.reduce((acc, a) => {
+        const filterType = assessmentFilters[course.id]?.type || '';
+        const filteredAssessments = filterType 
+          ? courseAssessments.filter(a => a.category === filterType)
+          : courseAssessments;
+        
+        const monthlyCount = filteredAssessments.reduce((acc, a) => {
           acc[a.month] = (acc[a.month] || 0) + 1;
           return acc;
         }, {});
 
+        const assessmentTypes = [...new Set(courseAssessments.map(a => a.category))];
+
         return (
           <div key={course.id} className="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden">
             <div className="bg-slate-900 px-8 py-4">
-              <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
-              <p className="text-xs text-slate-400">{courseAssessments.length} assessments • {Object.keys(monthlyCount).length} months</p>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="text-lg font-black text-white">{course.code} - {course.title}</h3>
+                  <p className="text-xs text-slate-400">{filteredAssessments.length} assessments • {Object.keys(monthlyCount).length} months</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="text-xs text-slate-400 uppercase font-black">Filter by Type</div>
+                  <select 
+                    value={filterType} 
+                    onChange={e => setAssessmentFilters(prev => ({...prev, [course.id]: {type: e.target.value}}))}
+                    className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1 text-sm font-bold text-white"
+                  >
+                    <option value="">All Types</option>
+                    {assessmentTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
             
-            {courseAssessments.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">No assessments created</div>
+            {filteredAssessments.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">
+                {filterType ? `No ${filterType} assessments found` : 'No assessments created'}
+              </div>
             ) : (
               <div className="p-6 space-y-4">
-                {courseAssessments.map(assessment => (
+                {filteredAssessments.map(assessment => (
                   <div key={assessment.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="font-black text-slate-800">{assessment.title}</h4>
                         <p className="text-sm text-slate-600">{assessment.category} • {assessment.month} {assessment.date}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex items-center gap-3">
                         <div className="text-lg font-black text-blue-600">HPS: {assessment.hps}</div>
-                        <button onClick={() => { 
-                          setEditingAssessment(assessment); 
-                          setNewAssessment({
-                            courseId: assessment.courseId.toString(),
-                            category: assessment.category,
-                            title: assessment.title,
-                            month: assessment.month,
-                            hps: assessment.hps,
-                            date: assessment.date,
-                            instructorComments: assessment.instructorComments || ''
-                          });
-                          setShowAssessmentModal(true); 
-                        }} className="text-xs text-blue-500 hover:text-blue-700 font-bold">Edit</button>
+                        <div className="flex gap-2">
+                          <button onClick={() => { 
+                            setEditingAssessment(assessment); 
+                            setNewAssessment({
+                              courseId: assessment.courseId.toString(),
+                              category: assessment.category,
+                              title: assessment.title,
+                              month: assessment.month,
+                              hps: assessment.hps,
+                              date: assessment.date,
+                              instructorComments: assessment.instructorComments || ''
+                            });
+                            setShowAssessmentModal(true); 
+                          }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl"><Edit size={18} /></button>
+                          <button onClick={() => handleDeleteAssessment(assessment.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
+                        </div>
                       </div>
                     </div>
                     {assessment.instructorComments && (
@@ -956,6 +993,7 @@ export default function AdminDashboard({ onLogout }) {
                       <th className="px-4 py-3 text-left text-xs font-black text-slate-500 uppercase">Month</th>
                       <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase">Current HPS</th>
                       <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase">New HPS</th>
+                      <th className="px-4 py-3 text-center text-xs font-black text-slate-500 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -978,6 +1016,24 @@ export default function AdminDashboard({ onLogout }) {
                             onChange={e => setHpsUpdates({...hpsUpdates, [assessment.id]: parseInt(e.target.value) || assessment.hps})}
                             className="w-20 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-center font-bold"
                           />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <button onClick={() => { 
+                              setEditingAssessment(assessment); 
+                              setNewAssessment({
+                                courseId: assessment.courseId.toString(),
+                                category: assessment.category,
+                                title: assessment.title,
+                                month: assessment.month,
+                                hps: assessment.hps,
+                                date: assessment.date,
+                                instructorComments: assessment.instructorComments || ''
+                              });
+                              setShowAssessmentModal(true); 
+                            }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl"><Edit size={18} /></button>
+                            <button onClick={() => handleDeleteAssessment(assessment.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
+                          </div>
                         </td>
                       </tr>
                     ))}
