@@ -90,8 +90,6 @@ export default function AdminDashboard({ onLogout }) {
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingAssessment, setEditingAssessment] = useState(null);
-  const [editingStudent, setEditingStudent] = useState(null);
-  const [editingEnrollment, setEditingEnrollment] = useState(null);
   const [showAssessmentSubmenu, setShowAssessmentSubmenu] = useState(false);
   const [assessmentFilters, setAssessmentFilters] = useState({});
 
@@ -199,29 +197,8 @@ export default function AdminDashboard({ onLogout }) {
     });
   };
 
-  const handleEditStudent = (student) => {
-    setEditingStudent(student);
-    setNewStudent({ name: student.name, program: student.program });
-    setStudentIdYear(parseInt(student.studentIdNum.split('-')[0]));
-    setShowStudentModal(true);
-  };
-
-  const handleUpdateStudent = () => {
-    if (!newStudent.name.trim() || !newStudent.program.trim()) return;
-    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program } : s));
-    setEditingStudent(null);
-    setNewStudent({ name: '', program: '' });
-    setShowStudentModal(false);
-  };
-
   const handleAddStudent = () => {
     if (!newStudent.name.trim() || !newStudent.program.trim()) return;
-    
-    if (editingStudent) {
-      handleUpdateStudent();
-      return;
-    }
-    
     const sequence = getNextSequenceNumber(studentIdYear);
     const newStudentData = {
       id: Date.now(),
@@ -282,12 +259,6 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleAddEnrollment = () => {
     if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
-    
-    if (editingEnrollment) {
-      handleUpdateEnrollment();
-      return;
-    }
-    
     const studentId = parseInt(selectedStudentForEnrollment);
     const courseId = parseInt(selectedCourseForEnrollment);
     
@@ -317,32 +288,6 @@ export default function AdminDashboard({ onLogout }) {
     if (window.confirm('Remove this enrollment?')) {
       setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
     }
-  };
-
-  const handleEditEnrollment = (enrollment) => {
-    setEditingEnrollment(enrollment);
-    setSelectedStudentForEnrollment(enrollment.studentId.toString());
-    setSelectedCourseForEnrollment(enrollment.courseId.toString());
-    setShowEnrollmentModal(true);
-  };
-
-  const handleUpdateEnrollment = () => {
-    if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
-    const studentId = parseInt(selectedStudentForEnrollment);
-    const courseId = parseInt(selectedCourseForEnrollment);
-    
-    // Check if this would create a duplicate enrollment
-    if (enrollments.find(e => e.id !== editingEnrollment.id && e.studentId === studentId && e.courseId === courseId)) {
-      alert('Already enrolled!');
-      return;
-    }
-
-    setEnrollments(enrollments.map(e => e.id === editingEnrollment.id ? { ...e, studentId, courseId } : e));
-    
-    setSelectedStudentForEnrollment('');
-    setSelectedCourseForEnrollment('');
-    setEditingEnrollment(null);
-    setShowEnrollmentModal(false);
   };
 
   // Assessment handlers
@@ -495,10 +440,7 @@ export default function AdminDashboard({ onLogout }) {
                         <td className="px-6 py-4 font-bold">{student?.name}</td>
                         <td className="px-6 py-4"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black uppercase">{student?.program}</span></td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <button onClick={() => handleEditEnrollment(enrollment)} className="p-2 text-blue-400 hover:bg-blue-50 rounded-xl"><Edit size={18} /></button>
-                            <button onClick={() => handleRemoveEnrollment(enrollment.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
-                          </div>
+                          <button onClick={() => handleRemoveEnrollment(enrollment.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
                         </td>
                       </tr>
                     );
@@ -515,8 +457,8 @@ export default function AdminDashboard({ onLogout }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md">
             <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
-              <h3 className="text-lg font-black text-white uppercase">{editingEnrollment ? 'Edit Enrollment' : 'Add Enrollment'}</h3>
-              <button onClick={() => { setShowEnrollmentModal(false); setEditingEnrollment(null); setSelectedStudentForEnrollment(''); setSelectedCourseForEnrollment(''); }} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <h3 className="text-lg font-black text-white uppercase">Add Enrollment</h3>
+              <button onClick={() => setShowEnrollmentModal(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-8 space-y-4">
               <div>
@@ -530,10 +472,10 @@ export default function AdminDashboard({ onLogout }) {
                 <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Select Student</label>
                 <select value={selectedStudentForEnrollment} onChange={e => setSelectedStudentForEnrollment(e.target.value)} disabled={!selectedCourseForEnrollment} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold disabled:bg-slate-100">
                   <option value="">Select Student</option>
-                  {selectedCourseForEnrollment && (editingEnrollment ? students : getUnenrolledStudents(parseInt(selectedCourseForEnrollment))).map(s => <option key={s.id} value={s.id}>{s.studentIdNum} - {s.name}</option>)}
+                  {selectedCourseForEnrollment && getUnenrolledStudents(parseInt(selectedCourseForEnrollment)).map(s => <option key={s.id} value={s.id}>{s.studentIdNum} - {s.name}</option>)}
                 </select>
               </div>
-              <button onClick={handleAddEnrollment} disabled={!selectedStudentForEnrollment || !selectedCourseForEnrollment} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">{editingEnrollment ? 'Update Enrollment' : 'Enroll Student'}</button>
+              <button onClick={handleAddEnrollment} disabled={!selectedStudentForEnrollment || !selectedCourseForEnrollment} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">Enroll Student</button>
             </div>
           </div>
         </div>
@@ -579,10 +521,7 @@ export default function AdminDashboard({ onLogout }) {
                 <td className="px-6 py-4"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black uppercase">{student.program}</span></td>
                 <td className="px-6 py-4 text-center"><span className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl font-black text-amber-700">{student.pinCode}</span></td>
                 <td className="px-6 py-4 text-center">
-                  <div className="flex gap-2 justify-center">
-                    <button onClick={() => handleEditStudent(student)} className="p-2 text-blue-400 hover:bg-blue-50 rounded-xl"><Edit size={18} /></button>
-                    <button onClick={() => handleDeleteStudent(student.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
-                  </div>
+                  <button onClick={() => handleDeleteStudent(student.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
                 </td>
               </tr>
             ))}
@@ -595,17 +534,17 @@ export default function AdminDashboard({ onLogout }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md">
             <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
-              <h3 className="text-lg font-black text-white uppercase">{editingStudent ? 'Edit Student' : 'Add Student'}</h3>
-              <button onClick={() => { setShowStudentModal(false); setEditingStudent(null); setNewStudent({ name: '', program: '' }); }} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <h3 className="text-lg font-black text-white uppercase">Add Student</h3>
+              <button onClick={() => setShowStudentModal(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-8 space-y-4">
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
-                <p className="text-xs text-blue-500 uppercase font-black mb-1">ID: {editingStudent ? editingStudent.studentIdNum : generateStudentIdNum(studentIdYear, getNextSequenceNumber(studentIdYear))}</p>
-                <p className="text-xs text-amber-500 uppercase font-black">PIN: {editingStudent ? editingStudent.pinCode : generatePinCode()}</p>
+                <p className="text-xs text-blue-500 uppercase font-black mb-1">ID: {generateStudentIdNum(studentIdYear, getNextSequenceNumber(studentIdYear))}</p>
+                <p className="text-xs text-amber-500 uppercase font-black">PIN: {generatePinCode()}</p>
               </div>
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Year</label>
-                <select value={studentIdYear} onChange={e => setStudentIdYear(parseInt(e.target.value))} disabled={!!editingStudent} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold disabled:bg-slate-100">
+                <select value={studentIdYear} onChange={e => setStudentIdYear(parseInt(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold">
                   {[2024,2025,2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
@@ -624,7 +563,7 @@ export default function AdminDashboard({ onLogout }) {
                   <option value="BSED">BSED</option>
                 </select>
               </div>
-              <button onClick={handleAddStudent} disabled={!newStudent.name.trim() || !newStudent.program} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">{editingStudent ? 'Update' : 'Register'}</button>
+              <button onClick={handleAddStudent} disabled={!newStudent.name.trim() || !newStudent.program} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">Register</button>
             </div>
           </div>
         </div>
