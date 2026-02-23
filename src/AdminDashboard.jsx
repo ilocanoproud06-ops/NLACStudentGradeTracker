@@ -11,9 +11,9 @@ const getCurrentYear = () => new Date().getFullYear();
 
 // Initial data
 const initialStudents = [
-  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521" },
-  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832" },
-  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012" }
+  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year" },
+  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year" },
+  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year" }
 ];
 
 const initialCourses = [
@@ -96,7 +96,7 @@ export default function AdminDashboard({ onLogout }) {
   const [assessmentFilters, setAssessmentFilters] = useState({});
 
   // Form states
-  const [newStudent, setNewStudent] = useState({ name: '', program: '' });
+  const [newStudent, setNewStudent] = useState({ name: '', program: '', yearLevel: '' });
   const [studentIdYear, setStudentIdYear] = useState(getCurrentYear());
   const [newCourse, setNewCourse] = useState({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
   const [selectedStudentForEnrollment, setSelectedStudentForEnrollment] = useState('');
@@ -201,16 +201,16 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleEditStudent = (student) => {
     setEditingStudent(student);
-    setNewStudent({ name: student.name, program: student.program });
+    setNewStudent({ name: student.name, program: student.program, yearLevel: student.yearLevel || '' });
     setStudentIdYear(parseInt(student.studentIdNum.split('-')[0]));
     setShowStudentModal(true);
   };
 
   const handleUpdateStudent = () => {
     if (!newStudent.name.trim() || !newStudent.program.trim()) return;
-    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program } : s));
+    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program, yearLevel: newStudent.yearLevel } : s));
     setEditingStudent(null);
-    setNewStudent({ name: '', program: '' });
+    setNewStudent({ name: '', program: '', yearLevel: '' });
     setShowStudentModal(false);
   };
 
@@ -228,10 +228,11 @@ export default function AdminDashboard({ onLogout }) {
       studentIdNum: generateStudentIdNum(studentIdYear, sequence),
       name: newStudent.name,
       program: newStudent.program,
-      pinCode: generatePinCode()
+      pinCode: generatePinCode(),
+      yearLevel: newStudent.yearLevel
     };
     setStudents([...students, newStudentData]);
-    setNewStudent({ name: '', program: '' });
+    setNewStudent({ name: '', program: '', yearLevel: '' });
     setShowStudentModal(false);
   };
 
@@ -566,6 +567,7 @@ export default function AdminDashboard({ onLogout }) {
               <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase">ID Number</th>
               <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase">Name</th>
               <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase">Program</th>
+              <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase">Year Level</th>
               <th className="px-6 py-5 text-center text-xs font-black text-blue-400 uppercase">PIN</th>
               <th className="px-6 py-5 text-center text-xs font-black text-slate-500 uppercase">Actions</th>
             </tr>
@@ -577,6 +579,7 @@ export default function AdminDashboard({ onLogout }) {
                 <td className="px-6 py-4 font-bold">{student.studentIdNum}</td>
                 <td className="px-6 py-4 font-bold">{student.name}</td>
                 <td className="px-6 py-4"><span className="bg-slate-100 px-3 py-1 rounded-full text-xs font-black uppercase">{student.program}</span></td>
+                <td className="px-6 py-4"><span className="bg-blue-50 border border-blue-200 px-3 py-1 rounded-full text-xs font-black uppercase">{student.yearLevel || '-'}</span></td>
                 <td className="px-6 py-4 text-center"><span className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl font-black text-amber-700">{student.pinCode}</span></td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex gap-2 justify-center">
@@ -622,6 +625,17 @@ export default function AdminDashboard({ onLogout }) {
                   <option value="BS MATH">BS MATH</option>
                   <option value="BSBA">BSBA</option>
                   <option value="BSED">BSED</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Year Level</label>
+                <select value={newStudent.yearLevel} onChange={e => setNewStudent({...newStudent, yearLevel: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold">
+                  <option value="">Select Year</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="5th Year">5th Year</option>
                 </select>
               </div>
               <button onClick={handleAddStudent} disabled={!newStudent.name.trim() || !newStudent.program} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">{editingStudent ? 'Update' : 'Register'}</button>

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   GraduationCap, ChevronRight, User, Key, X, Edit, Save, 
-  BookOpen, Calendar, ClipboardList, Percent, Award
+  BookOpen, Calendar, ClipboardList, Percent, Award, Clock
 } from 'lucide-react';
 
 // Helper function to calculate letter grade
@@ -31,11 +31,33 @@ const getGradeColor = (percentage) => {
 
 export default function StudentDashboard({ student, onLogout }) {
   const [activeTab, setActiveTab] = useState('grades');
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editProfile, setEditProfile] = useState({
     name: student.name,
     program: student.program,
     pinCode: student.pinCode
+  });
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format date and time
+  const formattedDate = currentDateTime.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  const formattedTime = currentDateTime.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit' 
   });
 
   // Filter states for each course
@@ -215,7 +237,11 @@ export default function StudentDashboard({ student, onLogout }) {
             <ChevronRight size={14} />
             <span className="text-slate-800 font-bold uppercase text-[10px]">{activeTab}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Clock size={16} />
+              <span className="font-bold text-sm">{formattedTime}</span>
+            </div>
             <div className="text-right">
               <div className="font-bold text-sm">{student.name}</div>
               <div className="text-xs text-slate-400">{student.studentIdNum}</div>
