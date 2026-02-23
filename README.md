@@ -24,9 +24,14 @@ Students can now access their grades online from any network using a dedicated s
 **Local Development:**
 - Student Portal: `http://localhost:5174/student.html`
 
-**Production URLs:**
-- GitHub Pages: `https://[username].github.io/[repo]/student.html`
-- Firebase: `https://[project].web.app/student.html`
+**Production URLs (Live Sites)**
+- **Student (Student-only — no admin access):**
+   - GitHub Pages: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/student-access.html
+   - Firebase: https://studentgradetracker-e04c0.web.app/student-access.html
+
+- **Admin (Admin login & dashboard):**
+   - GitHub Pages: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/
+   - Firebase: https://studentgradetracker-e04c0.web.app/
 
 ### How It Works
 
@@ -128,8 +133,10 @@ After deployment, share this URL with students:
 - **Firebase**: `https://[project-id].web.app/student.html`
 
 **Example:**
-- GitHub Pages: `https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/student.html`
-- Firebase: `https://nlac-grade-tracker.web.app/student.html`
+- Student-only: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/student-access.html
+- Admin login: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/
+
+> Note: The student-access page intentionally blocks admin routes — students cannot access admin login or dashboard from that URL.
 
 ### Quick Deployment Guide
 
