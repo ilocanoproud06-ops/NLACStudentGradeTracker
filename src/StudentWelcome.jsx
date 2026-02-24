@@ -99,7 +99,7 @@ export default function StudentWelcome({ onEnter, onBack }) {
             <p className="text-slate-400 text-xs">Your personal information is protected. Use your credentials responsibly.</p>
           </div>
           <p className="text-slate-600 text-xs font-medium">
-            © 2026 AcademicPro Systems. All rights reserved.
+            © 2026 Student Grade Tracker. All rights reserved.
           </p>
         </div>
       </div>

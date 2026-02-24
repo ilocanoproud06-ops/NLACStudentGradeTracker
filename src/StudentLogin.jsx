@@ -105,7 +105,7 @@ export default function StudentLogin({ onLogin, onBack }) {
         </div>
         
         <p className="text-center mt-8 text-slate-600 text-xs font-medium">
-          © 2026 AcademicPro Systems. All rights reserved.
+          © 2026 Student Grade Tracker. All rights reserved.
         </p>
       </div>
     </div>

@@ -108,7 +108,7 @@ function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2 uppercase">Admin Portal</h2>
+                <h2 className="text-2xl font-black text-white mb-2 uppercase">Admin Dashoard</h2>
                 <p className="text-slate-400 text-sm text-center">Manage student records, courses, enrollments, and enter grades</p>
                 <div className="mt-6 flex items-center gap-2 text-blue-400 font-bold text-sm uppercase tracking-widest group-hover:translate-x-2 transition-transform">
                   Enter Admin <span className="text-xl">→</span>

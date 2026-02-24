@@ -193,7 +193,7 @@ export default function StudentDashboard({ student, onLogout }) {
       <aside className="w-72 bg-[#1e293b] flex flex-col">
         <div className="p-8 flex items-center gap-4 text-white">
           <div className="bg-emerald-500 p-2 rounded-xl"><GraduationCap className="w-6 h-6" /></div>
-          <span className="text-xl font-black uppercase">Academic<span className="text-emerald-400">Pro</span></span>
+          <span className="text-xl font-black uppercase">Student<span className="text-emerald-400">Dashboard</span></span>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <button onClick={() => setActiveTab('grades')} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold ${activeTab === 'grades' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}>
@@ -266,7 +266,7 @@ export default function StudentDashboard({ student, onLogout }) {
               {enrolledCourses.length === 0 ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
                   <p className="font-bold text-amber-700">No courses enrolled</p>
-                  <p className="text-sm text-amber-600">Please contact your administrator to enroll in courses.</p>
+                  <p className="text-sm text-amber-600">Please contact your instructor to enroll in courses.</p>
                 </div>
               ) : (
                 enrolledCourses.map(course => {

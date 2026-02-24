@@ -99,7 +99,7 @@ export default function AdminWelcome({ onEnter, onBack }) {
             <p className="text-slate-400 text-xs">Unauthorized access is prohibited. All activities are monitored and logged.</p>
           </div>
           <p className="text-slate-600 text-xs font-medium">
-            © 2026 AcademicPro Systems. All rights reserved.
+            © 2026 Student Grade Tracker. All rights reserved.
           </p>
         </div>
       </div>
