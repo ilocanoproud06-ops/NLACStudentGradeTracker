@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  GraduationCap, ChevronRight, User, Key, X, Edit, Save, 
+import {
+  GraduationCap, ChevronRight, User, Key, X, Edit, Save,
   BookOpen, Calendar, ClipboardList, Percent, Award, Clock
 } from 'lucide-react';
+import studentSession from './sessionManager';
 
 // Helper function to calculate letter grade
 const getLetterGrade = (percentage) => {
@@ -30,6 +31,14 @@ const getGradeColor = (percentage) => {
 };
 
 export default function StudentDashboard({ student, onLogout }) {
+  // Validate session on component mount
+  useEffect(() => {
+    if (!studentSession.validateSession()) {
+      // Redirect to login if no valid session
+      onLogout();
+      window.location.href = './student.html';
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState('grades');
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -65,26 +74,42 @@ export default function StudentDashboard({ student, onLogout }) {
   // Filter states for each course
   const [courseFilters, setCourseFilters] = useState({});
 
-  // Get data from localStorage
+  // Get data from localStorage - only for the authenticated student
   const courses = useMemo(() => {
     const stored = localStorage.getItem('nlac_courses');
-    return stored ? JSON.parse(stored) : [];
+    const allCourses = stored ? JSON.parse(stored) : [];
+    
+    // Only return courses the student is enrolled in
+    const studentEnrollments = enrollments.filter(e => e.studentId === student.id);
+    const enrolledCourseIds = studentEnrollments.map(e => e.courseId);
+    return allCourses.filter(c => enrolledCourseIds.includes(c.id));
   }, []);
-
+  
   const enrollments = useMemo(() => {
     const stored = localStorage.getItem('nlac_enrollments');
-    return stored ? JSON.parse(stored) : [];
-  }, []);
-
+    const allEnrollments = stored ? JSON.parse(stored) : [];
+    
+    // Only return enrollments for the authenticated student
+    return allEnrollments.filter(e => e.studentId === student.id);
+  }, [student.id]);
+  
   const assessments = useMemo(() => {
     const stored = localStorage.getItem('nlac_assessments');
-    return stored ? JSON.parse(stored) : [];
-  }, []);
-
+    const allAssessments = stored ? JSON.parse(stored) : [];
+    
+    // Only return assessments for courses the student is enrolled in
+    const studentEnrollments = enrollments.filter(e => e.studentId === student.id);
+    const enrolledCourseIds = studentEnrollments.map(e => e.courseId);
+    return allAssessments.filter(a => enrolledCourseIds.includes(a.courseId));
+  }, [enrollments]);
+  
   const grades = useMemo(() => {
     const stored = localStorage.getItem('nlac_grades');
-    return stored ? JSON.parse(stored) : [];
-  }, []);
+    const allGrades = stored ? JSON.parse(stored) : [];
+    
+    // Only return grades for the authenticated student
+    return allGrades.filter(g => g.studentId === student.id);
+  }, [student.id]);
 
   // Get student's enrolled courses
   const studentEnrollments = useMemo(() => 
@@ -178,11 +203,17 @@ export default function StudentDashboard({ student, onLogout }) {
 
   // Handle profile update
   const handleUpdateProfile = () => {
+    // Validate session before updating
+    if (!studentSession.validateSession()) {
+      onLogout();
+      return;
+    }
+    
     const storedStudents = localStorage.getItem('nlac_students');
     const students = storedStudents ? JSON.parse(storedStudents) : [];
     
-    const updatedStudents = students.map(s => 
-      s.id === student.id 
+    const updatedStudents = students.map(s =>
+      s.id === student.id
         ? { ...s, name: editProfile.name, program: editProfile.program, pinCode: editProfile.pinCode, yearLevel: editProfile.yearLevel, email: editProfile.email }
         : s
     );

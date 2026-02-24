@@ -263,62 +263,6 @@ export default function DataStorageViewer() {
           </div>
         )}
 
-        {/* Data Structure Information */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Structure Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-gray-900 mb-2">Local Storage Collections</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>nlac_students</strong> - Student records with ID, name, program, PIN</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>nlac_courses</strong> - Course information</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>nlac_enrollments</strong> - Student-course relationships</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>nlac_assessments</strong> - Assessment/exam details</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>nlac_grades</strong> - Student grades for assessments</span>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900 mb-2">Cloud Storage (Firebase Data Connect)</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>Students Table</strong> - Secure student data with authentication</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>Courses Table</strong> - Academic course catalog</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>Enrollments Table</strong> - Student enrollment records</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>Assessments Table</strong> - Exam and assignment details</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-2"></span>
-                  <span><strong>Grades Table</strong> - Student performance records</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

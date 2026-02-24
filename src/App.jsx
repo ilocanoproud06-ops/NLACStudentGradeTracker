@@ -76,6 +76,7 @@ function App() {
     setUserType('admin');
     setIsAuthenticated(true);
   };
+  
 
   const handleStudentLogin = (student) => {
     setUserType('student');
@@ -85,9 +86,14 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear student session if it exists
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('studentSession');
+    }
+    
     if (isSecureStudentAccess) {
       // For secure student access, redirect back to the secure portal
-      window.location.href = './student-access.html';
+      window.location.href = './student.html';
       return;
     }
     setUserType(null);

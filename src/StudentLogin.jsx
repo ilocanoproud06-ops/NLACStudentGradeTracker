@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft } from 'lucide-react';
+import studentSession from './sessionManager';
 
 export default function StudentLogin({ onLogin, onBack }) {
   const [studentIdNum, setStudentIdNum] = useState('');
@@ -38,6 +39,8 @@ export default function StudentLogin({ onLogin, onBack }) {
     // More detailed error messaging
     if (student) {
       console.log('Login successful for:', student);
+      // Start student session
+      studentSession.startSession(student.id);
       onLogin(student);
     } else {
       // Check what specifically is wrong

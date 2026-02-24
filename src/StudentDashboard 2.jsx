@@ -154,11 +154,17 @@ export default function StudentDashboard({ student, onLogout }) {
 
   // Handle profile update
   const handleUpdateProfile = () => {
+    // Validate session before updating
+    if (!studentSession.validateSession()) {
+      onLogout();
+      return;
+    }
+    
     const storedStudents = localStorage.getItem('nlac_students');
     const students = storedStudents ? JSON.parse(storedStudents) : [];
     
-    const updatedStudents = students.map(s => 
-      s.id === student.id 
+    const updatedStudents = students.map(s =>
+      s.id === student.id
         ? { ...s, name: editProfile.name, program: editProfile.program, pinCode: editProfile.pinCode }
         : s
     );
