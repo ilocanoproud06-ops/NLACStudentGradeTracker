@@ -11,9 +11,9 @@ const getCurrentYear = () => new Date().getFullYear();
 
 // Initial data
 const initialStudents = [
-  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year" },
-  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year" },
-  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year" }
+  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
 ];
 
 const initialCourses = [
@@ -96,7 +96,7 @@ export default function AdminDashboard({ onLogout }) {
   const [assessmentFilters, setAssessmentFilters] = useState({});
 
   // Form states
-  const [newStudent, setNewStudent] = useState({ name: '', program: '', yearLevel: '' });
+  const [newStudent, setNewStudent] = useState({ name: '', program: '', yearLevel: '', email: '' });
   const [studentIdYear, setStudentIdYear] = useState(getCurrentYear());
   const [newCourse, setNewCourse] = useState({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
   const [selectedStudentForEnrollment, setSelectedStudentForEnrollment] = useState('');
@@ -201,16 +201,16 @@ export default function AdminDashboard({ onLogout }) {
 
   const handleEditStudent = (student) => {
     setEditingStudent(student);
-    setNewStudent({ name: student.name, program: student.program, yearLevel: student.yearLevel || '' });
+    setNewStudent({ name: student.name, program: student.program, yearLevel: student.yearLevel || '', email: student.email || '' });
     setStudentIdYear(parseInt(student.studentIdNum.split('-')[0]));
     setShowStudentModal(true);
   };
 
   const handleUpdateStudent = () => {
     if (!newStudent.name.trim() || !newStudent.program.trim()) return;
-    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program, yearLevel: newStudent.yearLevel } : s));
+    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program, yearLevel: newStudent.yearLevel, email: newStudent.email } : s));
     setEditingStudent(null);
-    setNewStudent({ name: '', program: '', yearLevel: '' });
+    setNewStudent({ name: '', program: '', yearLevel: '', email: '' });
     setShowStudentModal(false);
   };
 
@@ -229,10 +229,11 @@ export default function AdminDashboard({ onLogout }) {
       name: newStudent.name,
       program: newStudent.program,
       pinCode: generatePinCode(),
-      yearLevel: newStudent.yearLevel
+      yearLevel: newStudent.yearLevel,
+      email: newStudent.email
     };
     setStudents([...students, newStudentData]);
-    setNewStudent({ name: '', program: '', yearLevel: '' });
+    setNewStudent({ name: '', program: '', yearLevel: '', email: '' });
     setShowStudentModal(false);
   };
 
@@ -637,6 +638,10 @@ export default function AdminDashboard({ onLogout }) {
                   <option value="4th Year">4th Year</option>
                   <option value="5th Year">5th Year</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Email (Optional)</label>
+                <input type="email" value={newStudent.email} onChange={e => setNewStudent({...newStudent, email: e.target.value})} placeholder="student@email.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold" />
               </div>
               <button onClick={handleAddStudent} disabled={!newStudent.name.trim() || !newStudent.program} className="w-full bg-blue-600 disabled:bg-slate-300 text-white font-black uppercase py-4 rounded-2xl">{editingStudent ? 'Update' : 'Register'}</button>
             </div>

@@ -36,7 +36,9 @@ export default function StudentDashboard({ student, onLogout }) {
   const [editProfile, setEditProfile] = useState({
     name: student.name,
     program: student.program,
-    pinCode: student.pinCode
+    pinCode: student.pinCode,
+    yearLevel: student.yearLevel || '',
+    email: student.email || ''
   });
 
   // Update time every second
@@ -181,7 +183,7 @@ export default function StudentDashboard({ student, onLogout }) {
     
     const updatedStudents = students.map(s => 
       s.id === student.id 
-        ? { ...s, name: editProfile.name, program: editProfile.program, pinCode: editProfile.pinCode }
+        ? { ...s, name: editProfile.name, program: editProfile.program, pinCode: editProfile.pinCode, yearLevel: editProfile.yearLevel, email: editProfile.email }
         : s
     );
     
@@ -191,6 +193,8 @@ export default function StudentDashboard({ student, onLogout }) {
     student.name = editProfile.name;
     student.program = editProfile.program;
     student.pinCode = editProfile.pinCode;
+    student.yearLevel = editProfile.yearLevel;
+    student.email = editProfile.email;
     
     setShowProfileModal(false);
   };
@@ -476,6 +480,31 @@ export default function StudentDashboard({ student, onLogout }) {
                   <option value="BSBA">BSBA</option>
                   <option value="BSED">BSED</option>
                 </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Year Level</label>
+                <select 
+                  value={editProfile.yearLevel} 
+                  onChange={e => setEditProfile({...editProfile, yearLevel: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold"
+                >
+                  <option value="">Select Year</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="5th Year">5th Year</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Email (Optional)</label>
+                <input 
+                  type="email" 
+                  value={editProfile.email} 
+                  onChange={e => setEditProfile({...editProfile, email: e.target.value})}
+                  placeholder="student@email.com"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold" 
+                />
               </div>
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase mb-2 block">New PIN Code</label>
