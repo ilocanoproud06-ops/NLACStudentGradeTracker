@@ -10,19 +10,45 @@ export default function StudentLogin({ onLogin, onBack }) {
     e.preventDefault();
     setError('');
 
-    // Get students from localStorage
+    // Initialize sample data if localStorage is empty
     const storedStudents = localStorage.getItem('nlac_students');
-    const students = storedStudents ? JSON.parse(storedStudents) : [];
+    let students = storedStudents ? JSON.parse(storedStudents) : [];
+
+    // If no students exist, initialize with sample data
+    if (students.length === 0) {
+      const sampleStudents = [
+        { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+        { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+        { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
+      ];
+      localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
+      students = sampleStudents;
+      console.log('Initialized localStorage with sample student data');
+    }
+
+    // Debug information
+    console.log('Login attempt:', { studentIdNum, pinCode });
+    console.log('Stored students:', students);
 
     // Find matching student
     const student = students.find(
       s => s.studentIdNum === studentIdNum && s.pinCode === pinCode
     );
 
+    // More detailed error messaging
     if (student) {
+      console.log('Login successful for:', student);
       onLogin(student);
     } else {
-      setError('Invalid ID Number or PIN. Please try again.');
+      // Check what specifically is wrong
+      const idMatch = students.find(s => s.studentIdNum === studentIdNum);
+      if (!idMatch) {
+        setError('ID Number not found. Please check your ID Number.');
+      } else if (idMatch.pinCode !== pinCode) {
+        setError('Incorrect PIN Code. Please try again.');
+      } else {
+        setError('Invalid ID Number or PIN. Please try again.');
+      }
     }
   };
 
@@ -105,7 +131,7 @@ export default function StudentLogin({ onLogin, onBack }) {
         </div>
         
         <p className="text-center mt-8 text-slate-600 text-xs font-medium">
-          © 2026 AcademicPro Systems. All rights reserved.
+          © 2026 Student Grade Tracker. All rights reserved.
         </p>
       </div>
     </div>
