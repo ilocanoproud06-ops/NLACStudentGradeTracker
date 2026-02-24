@@ -5,6 +5,8 @@ import AdminWelcome from './AdminWelcome';
 import StudentLogin from './StudentLogin';
 import StudentDashboard from './StudentDashboard';
 import StudentWelcome from './StudentWelcome';
+import DataStorageViewer from './DataStorageViewer';
+import CloudStorageDemo from './CloudStorageDemo';
 
 function App() {
   const [userType, setUserType] = useState(null); // 'admin' | 'student' | null
@@ -13,12 +15,26 @@ function App() {
   const [studentData, setStudentData] = useState(null);
   const [isStudentOnlyMode, setIsStudentOnlyMode] = useState(false);
   const [isSecureStudentAccess, setIsSecureStudentAccess] = useState(false);
+  const [showDataViewer, setShowDataViewer] = useState(false);
+  const [showCloudDemo, setShowCloudDemo] = useState(false);
 
   // Check if we're in student-only mode (accessed via student URL)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const currentPath = window.location.pathname;
+    const hash = window.location.hash;
     const studentId = urlParams.get('student');
+    
+    // Handle hash routing for data viewer and cloud demo
+    if (hash === '#data-viewer') {
+      setShowDataViewer(true);
+      return;
+    }
+    
+    if (hash === '#cloud-demo') {
+      setShowCloudDemo(true);
+      return;
+    }
 
     // Handle redirect from secure student portal
     if (studentId) {
@@ -52,6 +68,13 @@ function App() {
     setUserType('admin');
     setIsAuthenticated(true);
     setShowWelcome(false);
+  };
+  
+  const handleBackToAdmin = () => {
+    setShowDataViewer(false);
+    setShowCloudDemo(false);
+    setUserType('admin');
+    setIsAuthenticated(true);
   };
 
   const handleStudentLogin = (student) => {
@@ -168,6 +191,10 @@ function App() {
       {userType === 'student' && isAuthenticated && studentData && (
         <StudentDashboard student={studentData} onLogout={handleLogout} />
       )}
+      
+      {/* Data Viewer and Cloud Demo */}
+      {showDataViewer && <DataStorageViewer />}
+      {showCloudDemo && <CloudStorageDemo />}
     </>
   );
 }

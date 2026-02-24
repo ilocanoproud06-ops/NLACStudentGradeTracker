@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
+import {
   LayoutDashboard, BookOpen, Users, FileEdit, ChevronRight, Calendar, GraduationCap,
-  Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin, FileText, Save
+  Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin, FileText, Save,
+  Database, Cloud
 } from 'lucide-react';
 
 // Helper functions
@@ -609,7 +610,7 @@ export default function AdminDashboard({ onLogout }) {
               </div>
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase mb-2 block">Year</label>
-                <select value={studentIdYear} onChange={e => setStudentIdYear(parseInt(e.target.value))} disabled={!!editingStudent} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold disabled:bg-slate-100">
+                <select value={studentIdYear} onChange={e => setStudentIdYear(parseInt(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold">
                   {[2024,2025,2026,2027,2028].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
@@ -1330,6 +1331,27 @@ export default function AdminDashboard({ onLogout }) {
           </div>
         </div>
       )}
+      
+      {/* Data Management Section */}
+      <div className="bg-white border-t border-slate-200 p-6">
+        <h3 className="text-lg font-black text-slate-800 mb-4">Data Management</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => window.location.hash = '#data-viewer'}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 px-4 rounded-xl transition-all flex items-center gap-3"
+          >
+            <Database className="w-5 h-5" />
+            View Local Storage Data
+          </button>
+          <button
+            onClick={() => window.location.hash = '#cloud-demo'}
+            className="bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-all flex items-center gap-3"
+          >
+            <Cloud className="w-5 h-5" />
+            Cloud Storage Demo
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
