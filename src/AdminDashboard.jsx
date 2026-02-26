@@ -17,7 +17,7 @@ import {
   getCloudStatus,
   STORAGE_KEYS
 } from './cloudDataService';
-import { syncToGitHub, syncFromGitHub, getGitHubStatus } from './githubCloudService';
+import { syncToGitHub, syncFromGitHub, getGitHubStatus, initializeGitHubStorage } from './githubCloudService';
 
 // Helper functions
 const generateStudentIdNum = (year, sequence) => `${year}-${String(sequence).padStart(4, '0')}`;
@@ -192,9 +192,30 @@ export default function AdminDashboard({ onLogout }) {
     }
   };
 
-  // Save to localStorage whenever data changes
-  useEffect(() => { saveToStorage('nlac_students', students); }, [students]);
+  // Save to localStorage whenever data changes and sync to GitHub Cloud
+  useEffect(() => { 
+    saveToStorage('nlac_students', students); 
+    
+    // Sync to GitHub Cloud Storage for cross-portal access
+    const syncToCloud = async () => {
+      try {
+        await syncToGitHub({
+          students,
+          courses,
+          enrollments,
+          assessments,
+          grades
+        });
+      } catch (err) {
+        console.log('GitHub sync error:', err);
+      }
+    };
+    syncToCloud();
+  }, [students]);
   useEffect(() => { saveToStorage('nlac_courses', courses); }, [courses]);
+  useEffect(() => { saveToStorage('nlac_enrollments', enrollments); }, [enrollments]);
+  useEffect(() => { saveToStorage('nlac_assessments', assessments); }, [assessments]);
+  useEffect(() => { saveToStorage('nlac_grades', grades); }, [grades]);
   useEffect(() => { saveToStorage('nlac_enrollments', enrollments); }, [enrollments]);
   useEffect(() => { saveToStorage('nlac_assessments', assessments); }, [assessments]);
   useEffect(() => { saveToStorage('nlac_grades', grades); }, [grades]);

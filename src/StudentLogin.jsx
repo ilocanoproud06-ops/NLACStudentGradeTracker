@@ -121,20 +121,30 @@ export default function StudentLogin({ onLogin, onBack }) {
     e.preventDefault();
     setError('');
 
-    // Ensure we have student data
-    let studentData = students;
+    // Always read directly from localStorage to get the latest data
+    // This ensures we get the most recent students added from admin dashboard
+    let studentData = [];
+    
+    // Check multiple storage keys for compatibility
+    const storageKeys = [STORAGE_KEYS.STUDENTS, 'nlac_students', 'nlac_cloud_students'];
+    for (const key of storageKeys) {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try {
+          studentData = JSON.parse(stored);
+          if (studentData.length > 0) {
+            console.log(`Loaded ${studentData.length} students from ${key}`);
+            break;
+          }
+        } catch (err) {
+          console.error(`Error parsing ${key}:`, err);
+        }
+      }
+    }
+
+    // If still empty, initialize with sample data
     if (!studentData || studentData.length === 0) {
       studentData = initializeStudentData();
-      setStudents(studentData);
-    }
-    
-    // Also check legacy key
-    if (!studentData || studentData.length === 0) {
-      const legacyStored = localStorage.getItem('nlac_students');
-      if (legacyStored) {
-        studentData = JSON.parse(legacyStored);
-        setStudents(studentData);
-      }
     }
 
     // Debug information
