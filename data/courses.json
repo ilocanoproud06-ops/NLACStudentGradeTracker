@@ -1,0 +1,4 @@
+[
+  { "id": 101, "title": "Mathematics 101", "code": "MATH101", "type": "Lecture", "day": "MWF", "time": "09:00 - 10:00", "room": "Room 301" },
+  { "id": 102, "title": "Computer Science", "code": "CS202", "type": "Lab", "day": "TTh", "time": "13:00 - 15:00", "room": "Lab 101" }
+]

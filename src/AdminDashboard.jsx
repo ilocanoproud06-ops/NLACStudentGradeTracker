@@ -70,6 +70,28 @@ const saveToStorage = (key, data) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
+// Auto-sync all data to cloud after CRUD operations
+const autoSyncToCloud = async (students, courses, enrollments, assessments, grades) => {
+  const data = { students, courses, enrollments, assessments, grades };
+  
+  try {
+    // Upload to Firebase
+    const { uploadAllToCloud } = await import('./cloudDataService');
+    await uploadAllToCloud(data);
+    console.log('✅ Auto-synced to Firebase');
+    
+    // Also sync to GitHub cloud storage
+    const { syncToGitHub } = await import('./githubCloudService');
+    await syncToGitHub(data);
+    console.log('✅ Auto-synced to GitHub Cloud');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Auto-sync error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('Enrollment');
   const [selectedCourseId, setSelectedCourseId] = useState(101);
@@ -357,15 +379,18 @@ export default function AdminDashboard({ onLogout }) {
     setShowStudentModal(true);
   };
 
-  const handleUpdateStudent = () => {
+  const handleUpdateStudent = async () => {
     if (!newStudent.name.trim() || !newStudent.program.trim()) return;
-    setStudents(students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program, yearLevel: newStudent.yearLevel, email: newStudent.email } : s));
+    const updatedStudents = students.map(s => s.id === editingStudent.id ? { ...s, name: newStudent.name, program: newStudent.program, yearLevel: newStudent.yearLevel, email: newStudent.email } : s);
+    setStudents(updatedStudents);
     setEditingStudent(null);
     setNewStudent({ name: '', program: '', yearLevel: '', email: '' });
     setShowStudentModal(false);
+    // Auto-sync to cloud
+    await autoSyncToCloud(updatedStudents, courses, enrollments, assessments, grades);
   };
 
-  const handleAddStudent = () => {
+  const handleAddStudent = async () => {
     if (!newStudent.name.trim() || !newStudent.program.trim()) return;
     
     if (editingStudent) {
@@ -383,24 +408,36 @@ export default function AdminDashboard({ onLogout }) {
       yearLevel: newStudent.yearLevel,
       email: newStudent.email
     };
-    setStudents([...students, newStudentData]);
+    const updatedStudents = [...students, newStudentData];
+    setStudents(updatedStudents);
     setNewStudent({ name: '', program: '', yearLevel: '', email: '' });
     setShowStudentModal(false);
+    // Auto-sync to cloud
+    await autoSyncToCloud(updatedStudents, courses, enrollments, assessments, grades);
   };
 
-  const handleDeleteStudent = (id) => {
+  const handleDeleteStudent = async (id) => {
     if (window.confirm('Delete this student?')) {
-      setStudents(students.filter(s => s.id !== id));
-      setEnrollments(enrollments.filter(e => e.studentId !== id));
-      setGrades(grades.filter(g => g.studentId !== id));
+      const updatedStudents = students.filter(s => s.id !== id);
+      const updatedEnrollments = enrollments.filter(e => e.studentId !== id);
+      const updatedGrades = grades.filter(g => g.studentId !== id);
+      setStudents(updatedStudents);
+      setEnrollments(updatedEnrollments);
+      setGrades(updatedGrades);
+      // Auto-sync to cloud
+      await autoSyncToCloud(updatedStudents, courses, updatedEnrollments, assessments, updatedGrades);
     }
   };
 
-  const handleAddCourse = () => {
+  const handleAddCourse = async () => {
     if (!newCourse.code.trim() || !newCourse.title.trim() || !newCourse.room.trim()) return;
-    setCourses([...courses, { id: Date.now(), ...newCourse }]);
+    const newCourseData = { id: Date.now(), ...newCourse };
+    const updatedCourses = [...courses, newCourseData];
+    setCourses(updatedCourses);
     setNewCourse({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
     setShowCourseModal(false);
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, updatedCourses, enrollments, assessments, grades);
   };
 
   const handleEditCourse = (course) => {
@@ -409,31 +446,41 @@ export default function AdminDashboard({ onLogout }) {
     setShowCourseModal(true);
   };
 
-  const handleUpdateCourse = () => {
+  const handleUpdateCourse = async () => {
     if (!newCourse.code.trim() || !newCourse.title.trim() || !newCourse.room.trim()) return;
-    setCourses(courses.map(c => c.id === editingCourse.id ? { ...newCourse, id: editingCourse.id } : c));
+    const updatedCourses = courses.map(c => c.id === editingCourse.id ? { ...newCourse, id: editingCourse.id } : c);
+    setCourses(updatedCourses);
     setEditingCourse(null);
     setNewCourse({ code: '', title: '', type: 'Lecture', day: 'MWF', time: '09:00 - 10:00', room: '' });
     setShowCourseModal(false);
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, updatedCourses, enrollments, assessments, grades);
   };
 
-  const handleDeleteCourse = (id) => {
+  const handleDeleteCourse = async (id) => {
     if (window.confirm('Delete this course?')) {
-      setCourses(courses.filter(c => c.id !== id));
-      setEnrollments(enrollments.filter(e => e.courseId !== id));
+      const updatedCourses = courses.filter(c => c.id !== id);
+      const updatedEnrollments = enrollments.filter(e => e.courseId !== id);
+      setCourses(updatedCourses);
+      setEnrollments(updatedEnrollments);
+      // Auto-sync to cloud
+      await autoSyncToCloud(students, updatedCourses, updatedEnrollments, assessments, grades);
     }
   };
 
-  const handleSaveCourses = () => {
+  const handleSaveCourses = async () => {
     // Force save to localStorage and show confirmation
     saveToStorage('nlac_courses', courses);
     saveToStorage('nlac_enrollments', enrollments);
     
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, assessments, grades);
+    
     // Show success message
-    alert(`✅ Course data saved successfully!\n\nCourses: ${courses.length}\nEnrollments: ${enrollments.length}\n\nAll changes have been saved to the database.`);
+    alert(`✅ Course data saved successfully!\n\nCourses: ${courses.length}\nEnrollments: ${enrollments.length}\n\nAll changes have been saved to the database and synced to cloud.`);
   };
 
-  const handleAddEnrollment = () => {
+  const handleAddEnrollment = async () => {
     if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
     
     if (editingEnrollment) {
@@ -449,7 +496,9 @@ export default function AdminDashboard({ onLogout }) {
       return;
     }
 
-    setEnrollments([...enrollments, { id: `en-${Date.now()}`, studentId, courseId }]);
+    const newEnrollment = { id: `en-${Date.now()}`, studentId, courseId };
+    const updatedEnrollments = [...enrollments, newEnrollment];
+    setEnrollments(updatedEnrollments);
     
     // Initialize grades
     const courseAssessments = assessments.filter(a => a.courseId === courseId);
@@ -459,16 +508,23 @@ export default function AdminDashboard({ onLogout }) {
       assessmentId: a.id,
       score: ""
     }));
-    setGrades([...grades, ...newGrades]);
+    const updatedGrades = [...grades, ...newGrades];
+    setGrades(updatedGrades);
 
     setSelectedStudentForEnrollment('');
     setSelectedCourseForEnrollment('');
     setShowEnrollmentModal(false);
+    
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, updatedEnrollments, assessments, updatedGrades);
   };
 
-  const handleRemoveEnrollment = (enrollmentId) => {
+  const handleRemoveEnrollment = async (enrollmentId) => {
     if (window.confirm('Remove this enrollment?')) {
-      setEnrollments(enrollments.filter(e => e.id !== enrollmentId));
+      const updatedEnrollments = enrollments.filter(e => e.id !== enrollmentId);
+      setEnrollments(updatedEnrollments);
+      // Auto-sync to cloud
+      await autoSyncToCloud(students, courses, updatedEnrollments, assessments, grades);
     }
   };
 
@@ -479,7 +535,7 @@ export default function AdminDashboard({ onLogout }) {
     setShowEnrollmentModal(true);
   };
 
-  const handleUpdateEnrollment = () => {
+  const handleUpdateEnrollment = async () => {
     if (!selectedStudentForEnrollment || !selectedCourseForEnrollment) return;
     const studentId = parseInt(selectedStudentForEnrollment);
     const courseId = parseInt(selectedCourseForEnrollment);
@@ -490,16 +546,20 @@ export default function AdminDashboard({ onLogout }) {
       return;
     }
 
-    setEnrollments(enrollments.map(e => e.id === editingEnrollment.id ? { ...e, studentId, courseId } : e));
+    const updatedEnrollments = enrollments.map(e => e.id === editingEnrollment.id ? { ...e, studentId, courseId } : e);
+    setEnrollments(updatedEnrollments);
     
     setSelectedStudentForEnrollment('');
     setSelectedCourseForEnrollment('');
     setEditingEnrollment(null);
     setShowEnrollmentModal(false);
+    
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, updatedEnrollments, assessments, grades);
   };
 
   // Assessment handlers
-  const handleAddAssessment = () => {
+  const handleAddAssessment = async () => {
     if (!newAssessment.title.trim() || !newAssessment.courseId) return;
     
     const assessmentData = {
@@ -513,65 +573,87 @@ export default function AdminDashboard({ onLogout }) {
       instructorComments: newAssessment.instructorComments
     };
 
+    let updatedAssessments;
     if (editingAssessment) {
-      setAssessments(assessments.map(a => a.id === editingAssessment.id ? { ...assessmentData, id: editingAssessment.id } : a));
+      updatedAssessments = assessments.map(a => a.id === editingAssessment.id ? { ...assessmentData, id: editingAssessment.id } : a);
     } else {
-      setAssessments([...assessments, assessmentData]);
+      updatedAssessments = [...assessments, assessmentData];
     }
+    
+    setAssessments(updatedAssessments);
 
     setNewAssessment({ courseId: '', category: 'Written Exam', title: '', month: 'February', hps: 100, date: '', instructorComments: '' });
     setEditingAssessment(null);
     setShowAssessmentModal(false);
+    
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, updatedAssessments, grades);
   };
 
-  const handleUpdateHPS = () => {
+  const handleUpdateHPS = async () => {
     if (Object.keys(hpsUpdates).length === 0) return;
     
-    setAssessments(assessments.map(a => ({
+    const updatedAssessments = assessments.map(a => ({
       ...a,
       hps: hpsUpdates[a.id] !== undefined ? hpsUpdates[a.id] : a.hps
-    })));
+    }));
+    setAssessments(updatedAssessments);
     
     setHpsUpdates({});
     setShowHPSModal(false);
+    
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, updatedAssessments, grades);
   };
 
-  const handleSaveHPS = () => {
+  const handleSaveHPS = async () => {
     // Force save to localStorage and show confirmation
     saveToStorage('nlac_assessments', assessments);
     saveToStorage('nlac_grades', grades);
     
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, assessments, grades);
+    
     // Show success message
-    alert(`✅ HPS data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll HPS changes have been saved to the database.`);
+    alert(`✅ HPS data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll HPS changes have been saved to the database and synced to cloud.`);
   };
 
-  const handleSaveAssessments = () => {
+  const handleSaveAssessments = async () => {
     // Force save to localStorage and show confirmation
     saveToStorage('nlac_assessments', assessments);
     saveToStorage('nlac_grades', grades);
     
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, assessments, grades);
+    
     // Show success message
-    alert(`✅ Assessment data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll assessment changes have been saved to the database.`);
+    alert(`✅ Assessment data saved successfully!\n\nAssessments: ${assessments.length}\nGrades: ${grades.length}\n\nAll assessment changes have been saved to the database and synced to cloud.`);
   };
 
-  const handleSaveStudents = () => {
+  const handleSaveStudents = async () => {
     // Force save to localStorage and show confirmation
     saveToStorage('nlac_students', students);
     saveToStorage('nlac_enrollments', enrollments);
     saveToStorage('nlac_grades', grades);
     
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, assessments, grades);
+    
     // Show success message
-    alert(`✅ Student data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll student changes have been saved to the database.`);
+    alert(`✅ Student data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll student changes have been saved to the database and synced to cloud.`);
   };
 
-  const handleSaveEnrollments = () => {
+  const handleSaveEnrollments = async () => {
     // Force save to localStorage and show confirmation
     saveToStorage('nlac_students', students);
     saveToStorage('nlac_enrollments', enrollments);
     saveToStorage('nlac_grades', grades);
     
+    // Auto-sync to cloud
+    await autoSyncToCloud(students, courses, enrollments, assessments, grades);
+    
     // Show success message
-    alert(`✅ Enrollment data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll enrollment changes have been saved to the database.`);
+    alert(`✅ Enrollment data saved successfully!\n\nStudents: ${students.length}\nEnrollments: ${enrollments.length}\nGrades: ${grades.length}\n\nAll enrollment changes have been saved to the database and synced to cloud.`);
   };
 
   // Grade editing handlers
@@ -581,17 +663,38 @@ export default function AdminDashboard({ onLogout }) {
     setShowGradeModal(true);
   };
 
-  const handleSaveGrade = () => {
+  const handleSaveGrade = async () => {
     const { studentId, assessmentId, score } = editingGradeData;
-    updateGrade(studentId, assessmentId, score);
+    
+    // Get current grades and calculate updated grades
+    const val = score === "" ? "" : parseFloat(score);
+    let updatedGrades;
+    setGrades(prev => {
+      const exists = prev.find(g => g.studentId === studentId && g.assessmentId === assessmentId);
+      updatedGrades = exists 
+        ? prev.map(g => (g.studentId === studentId && g.assessmentId === assessmentId) ? { ...g, score: val } : g)
+        : [...prev, { id: `g-${Date.now()}`, studentId, assessmentId, score: val }];
+      return updatedGrades;
+    });
+    
     setShowGradeModal(false);
     setEditingGradeData({ studentId: '', assessmentId: '', score: '' });
+    
+    // Auto-sync to cloud (use a timeout to ensure state is updated)
+    setTimeout(async () => {
+      const currentGrades = grades;
+      await autoSyncToCloud(students, courses, enrollments, assessments, currentGrades);
+    }, 100);
   };
 
-  const handleDeleteAssessment = (assessmentId) => {
+  const handleDeleteAssessment = async (assessmentId) => {
     if (window.confirm('Delete this assessment? This will also remove all associated grades.')) {
-      setAssessments(assessments.filter(a => a.id !== assessmentId));
-      setGrades(grades.filter(g => g.assessmentId !== assessmentId));
+      const updatedAssessments = assessments.filter(a => a.id !== assessmentId);
+      const updatedGrades = grades.filter(g => g.assessmentId !== assessmentId);
+      setAssessments(updatedAssessments);
+      setGrades(updatedGrades);
+      // Auto-sync to cloud
+      await autoSyncToCloud(students, courses, enrollments, updatedAssessments, updatedGrades);
     }
   };
 
