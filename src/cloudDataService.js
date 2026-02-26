@@ -117,39 +117,57 @@ export const setCloudSyncEnabled = (enabled) => {
   localStorage.setItem(STORAGE_KEYS.SYNC_ENABLED, enabled ? 'true' : 'false');
 };
 
-// Upload all data to Firebase (for initial sync)
-export const uploadAllToCloud = async () => {
-  const sampleData = getSampleData();
+// Upload all data to Firebase
+export const uploadAllToCloud = async (data = null) => {
+  // Use provided data or load from localStorage
+  let uploadData;
+  if (data) {
+    uploadData = data;
+  } else {
+    // Load from localStorage
+    uploadData = {
+      students: loadFromLocalStorage(STORAGE_KEYS.STUDENTS, []),
+      courses: loadFromLocalStorage(STORAGE_KEYS.COURSES, []),
+      enrollments: loadFromLocalStorage(STORAGE_KEYS.ENROLLMENTS, []),
+      assessments: loadFromLocalStorage(STORAGE_KEYS.ASSESSMENTS, []),
+      grades: loadFromLocalStorage(STORAGE_KEYS.GRADES, [])
+    };
+  }
+  
+  // If still empty, use sample data
+  if (!uploadData.students || uploadData.students.length === 0) {
+    uploadData = getSampleData();
+  }
   
   try {
     const batch = writeBatch(db);
     
     // Upload students
-    for (const student of sampleData.students) {
+    for (const student of uploadData.students) {
       const docRef = doc(db, COLLECTIONS.STUDENTS, student.id.toString());
       batch.set(docRef, student);
     }
     
     // Upload courses
-    for (const course of sampleData.courses) {
+    for (const course of uploadData.courses) {
       const docRef = doc(db, COLLECTIONS.COURSES, course.id.toString());
       batch.set(docRef, course);
     }
     
     // Upload enrollments
-    for (const enrollment of sampleData.enrollments) {
+    for (const enrollment of uploadData.enrollments) {
       const docRef = doc(db, COLLECTIONS.ENROLLMENTS, enrollment.id);
       batch.set(docRef, enrollment);
     }
     
     // Upload assessments
-    for (const assessment of sampleData.assessments) {
+    for (const assessment of uploadData.assessments) {
       const docRef = doc(db, COLLECTIONS.ASSESSMENTS, assessment.id.toString());
       batch.set(docRef, assessment);
     }
     
     // Upload grades
-    for (const grade of sampleData.grades) {
+    for (const grade of uploadData.grades) {
       const docRef = doc(db, COLLECTIONS.GRADES, grade.id);
       batch.set(docRef, grade);
     }
@@ -159,17 +177,10 @@ export const uploadAllToCloud = async () => {
     // Update sync status
     localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
     
-    // Also save to localStorage
-    saveToLocalStorage(STORAGE_KEYS.STUDENTS, sampleData.students);
-    saveToLocalStorage(STORAGE_KEYS.COURSES, sampleData.courses);
-    saveToLocalStorage(STORAGE_KEYS.ENROLLMENTS, sampleData.enrollments);
-    saveToLocalStorage(STORAGE_KEYS.ASSESSMENTS, sampleData.assessments);
-    saveToLocalStorage(STORAGE_KEYS.GRADES, sampleData.grades);
-    
-    console.log('✅ All data uploaded to cloud successfully!');
+    console.log('✅ All data uploaded to Firebase successfully!');
     return { success: true };
   } catch (error) {
-    console.error('Error uploading to cloud:', error);
+    console.error('Error uploading to Firebase:', error);
     return { success: false, error: error.message };
   }
 };

@@ -131,10 +131,7 @@ export default function AdminDashboard({ onLogout }) {
       // Initial upload when enabling sync
       setIsSyncing(true);
       
-      // Upload to Firebase
-      const firebaseResult = await uploadAllToCloud();
-      
-      // Also upload to GitHub as backup
+      // Prepare local data
       const localData = {
         students,
         courses,
@@ -142,6 +139,11 @@ export default function AdminDashboard({ onLogout }) {
         assessments,
         grades
       };
+      
+      // Upload actual data to Firebase
+      const firebaseResult = await uploadAllToCloud(localData);
+      
+      // Also upload to GitHub as backup
       await syncToGitHub(localData);
       
       setIsSyncing(false);
@@ -156,10 +158,7 @@ export default function AdminDashboard({ onLogout }) {
   const handleManualSync = async () => {
     setIsSyncing(true);
     
-    // Upload to Firebase
-    const firebaseResult = await uploadAllToCloud();
-    
-    // Also upload to GitHub as backup
+    // Prepare local data
     const localData = {
       students,
       courses,
@@ -167,6 +166,11 @@ export default function AdminDashboard({ onLogout }) {
       assessments,
       grades
     };
+    
+    // Upload actual data to Firebase
+    const firebaseResult = await uploadAllToCloud(localData);
+    
+    // Also upload to GitHub as backup
     await syncToGitHub(localData);
     
     setIsSyncing(false);
@@ -192,22 +196,23 @@ export default function AdminDashboard({ onLogout }) {
     }
   };
 
-  // Save to localStorage whenever data changes and sync to GitHub Cloud
+  // Save to localStorage whenever data changes and sync to Firebase and GitHub Cloud
   useEffect(() => { 
     saveToStorage('nlac_students', students); 
     
-    // Sync to GitHub Cloud Storage for cross-portal access
+    // Sync to Firebase and GitHub Cloud Storage for cross-portal access
     const syncToCloud = async () => {
       try {
-        await syncToGitHub({
-          students,
-          courses,
-          enrollments,
-          assessments,
-          grades
-        });
+        // Sync to Firebase
+        const localData = { students, courses, enrollments, assessments, grades };
+        await uploadAllToCloud(localData);
+        
+        // Also sync to GitHub
+        await syncToGitHub(localData);
+        
+        console.log('Data synced to cloud successfully');
       } catch (err) {
-        console.log('GitHub sync error:', err);
+        console.log('Cloud sync error:', err);
       }
     };
     syncToCloud();
