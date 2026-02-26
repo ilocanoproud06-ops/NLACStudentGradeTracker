@@ -20,6 +20,19 @@ function App() {
 
   // Check if we're in student-only mode (accessed via student URL)
   useEffect(() => {
+    // Check for window.initialUserType (set by admin.html or student.html)
+    if (window.initialUserType === 'admin') {
+      setUserType('admin');
+      setShowWelcome(window.initialShowWelcome === 'true');
+      return;
+    }
+    
+    if (window.initialUserType === 'student') {
+      setUserType('student');
+      setShowWelcome(window.initialShowWelcome === 'true');
+      return;
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
     const currentPath = window.location.pathname;
     const hash = window.location.hash;

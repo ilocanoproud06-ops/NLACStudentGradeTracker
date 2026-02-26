@@ -1,39 +1,153 @@
-import React, { useState } from 'react';
-import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import studentSession from './sessionManager';
+import { loadFromLocalStorage, saveToLocalStorage, STORAGE_KEYS, isCloudSyncEnabled, setCloudSyncEnabled } from './cloudDataService';
+import { initializeGitHubStorage, syncToGitHub, syncFromGitHub, getGitHubStatus, isGitHubStorageAvailable } from './githubCloudService';
 
 export default function StudentLogin({ onLogin, onBack }) {
   const [studentIdNum, setStudentIdNum] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [cloudStatus, setCloudStatus] = useState('initializing'); // 'firebase', 'github', 'local', 'initializing'
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [students, setStudents] = useState([]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError('');
+  // Check online status and sync settings
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Initialize student data and cloud services
+    const initialize = async () => {
+      try {
+        // Auto-enable cloud sync by default
+        setCloudSyncEnabled(true);
+        setSyncEnabled(true);
+        
+        // Initialize cloud storage (Firebase first, then GitHub fallback)
+        setCloudStatus('initializing');
+        
+        // Initialize GitHub storage as fallback
+        await initializeGitHubStorage();
+        
+        // Try to sync from cloud
+        const loadedStudents = await syncStudentDataFromCloud();
+        setStudents(loadedStudents);
+        
+        setCloudStatus('ready');
+      } catch (error) {
+        console.error('Cloud initialization error:', error);
+        // Fall back to local data
+        const localStudents = initializeStudentData();
+        setStudents(localStudents);
+        setCloudStatus('local');
+      }
+      
+      setIsLoading(false);
+    };
+    
+    initialize();
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
-    // Initialize sample data if localStorage is empty
-    const storedStudents = localStorage.getItem('nlac_students');
-    let students = storedStudents ? JSON.parse(storedStudents) : [];
+  // Sync student data from cloud (Firebase -> GitHub -> localStorage)
+  const syncStudentDataFromCloud = async () => {
+    let studentData = null;
+    
+    // Try Firebase first
+    try {
+      const { downloadAllFromCloud } = await import('./cloudDataService');
+      const result = await downloadAllFromCloud();
+      if (result.success && result.data && result.data.students.length > 0) {
+        setCloudStatus('firebase');
+        return result.data.students;
+      }
+    } catch (error) {
+      console.log('Firebase not available, trying GitHub...');
+    }
+    
+    // Try GitHub storage as fallback
+    try {
+      const githubData = await syncFromGitHub();
+      if (githubData && githubData.students && githubData.students.length > 0) {
+        setCloudStatus('github');
+        // Save to localStorage
+        saveToLocalStorage(STORAGE_KEYS.STUDENTS, githubData.students);
+        return githubData.students;
+      }
+    } catch (error) {
+      console.log('GitHub storage not available, using local data');
+    }
+    
+    // Fall back to localStorage
+    const localStudents = initializeStudentData();
+    setCloudStatus('local');
+    return localStudents;
+  };
+
+  // Initialize student data if not present
+  const initializeStudentData = () => {
+    const stored = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+    let data = stored ? JSON.parse(stored) : [];
 
     // If no students exist, initialize with sample data
-    if (students.length === 0) {
+    if (data.length === 0) {
       const sampleStudents = [
         { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
         { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
         { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
       ];
-      localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
-      students = sampleStudents;
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(sampleStudents));
+      localStorage.setItem('nlac_students', JSON.stringify(sampleStudents)); // Also set legacy key
+      data = sampleStudents;
       console.log('Initialized localStorage with sample student data');
+      console.log('Sample students:', data);
+    }
+
+    return data;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Ensure we have student data
+    let studentData = students;
+    if (!studentData || studentData.length === 0) {
+      studentData = initializeStudentData();
+      setStudents(studentData);
+    }
+    
+    // Also check legacy key
+    if (!studentData || studentData.length === 0) {
+      const legacyStored = localStorage.getItem('nlac_students');
+      if (legacyStored) {
+        studentData = JSON.parse(legacyStored);
+        setStudents(studentData);
+      }
     }
 
     // Debug information
     console.log('Login attempt:', { studentIdNum, pinCode });
-    console.log('Stored students:', students);
+    console.log('Available students:', studentData);
+
+    // Normalize input - trim whitespace
+    const normalizedIdNum = studentIdNum.trim();
+    const normalizedPin = pinCode.trim();
 
     // Find matching student
-    const student = students.find(
-      s => s.studentIdNum === studentIdNum && s.pinCode === pinCode
+    const student = studentData.find(
+      s => s.studentIdNum === normalizedIdNum && s.pinCode === normalizedPin
     );
 
     // More detailed error messaging
@@ -41,19 +155,62 @@ export default function StudentLogin({ onLogin, onBack }) {
       console.log('Login successful for:', student);
       // Start student session
       studentSession.startSession(student.id);
+      
+      // Sync data to cloud in background
+      try {
+        await syncStudentDataToCloud(student);
+      } catch (err) {
+        console.log('Background sync failed:', err);
+      }
+      
       onLogin(student);
     } else {
       // Check what specifically is wrong
-      const idMatch = students.find(s => s.studentIdNum === studentIdNum);
+      const idMatch = studentData.find(s => s.studentIdNum === normalizedIdNum);
       if (!idMatch) {
         setError('ID Number not found. Please check your ID Number.');
-      } else if (idMatch.pinCode !== pinCode) {
+      } else if (idMatch.pinCode !== normalizedPin) {
         setError('Incorrect PIN Code. Please try again.');
       } else {
         setError('Invalid ID Number or PIN. Please try again.');
       }
     }
   };
+
+  // Sync student data to cloud (Firebase + GitHub)
+  const syncStudentDataToCloud = async (student) => {
+    const allData = {
+      students: students,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Upload to Firebase
+    try {
+      const { uploadAllToCloud } = await import('./cloudDataService');
+      await uploadAllToCloud();
+    } catch (err) {
+      console.log('Firebase upload failed:', err);
+    }
+    
+    // Upload to GitHub as backup
+    try {
+      await syncToGitHub(allData);
+    } catch (err) {
+      console.log('GitHub upload failed:', err);
+    }
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">📚</div>
+          <div className="text-white font-bold text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 relative overflow-hidden">
@@ -71,6 +228,35 @@ export default function StudentLogin({ onLogin, onBack }) {
         </button>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-10 rounded-[40px] shadow-2xl">
+          {/* Connection Status - Enhanced with Cloud Status */}
+          <div className="space-y-2 mb-4">
+            {/* Online/Offline Status */}
+            <div className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl ${isOnline ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}`}>
+              {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
+              <span>{isOnline ? 'Online' : 'Offline - Using Local Data'}</span>
+            </div>
+            {/* Cloud Sync Status */}
+            <div className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl ${
+              cloudStatus === 'firebase' ? 'bg-orange-500/10 text-orange-400' :
+              cloudStatus === 'github' ? 'bg-purple-500/10 text-purple-400' :
+              cloudStatus === 'local' ? 'bg-slate-500/10 text-slate-400' :
+              'bg-blue-500/10 text-blue-400'
+            }`}>
+              {cloudStatus === 'initializing' ? <RefreshCw size={14} className="animate-spin" /> :
+               cloudStatus === 'firebase' ? <Cloud size={14} /> :
+               cloudStatus === 'github' ? <Cloud size={14} /> :
+               cloudStatus === 'local' ? <CloudOff size={14} /> :
+               <Cloud size={14} />}
+              <span>
+                {cloudStatus === 'initializing' ? 'Initializing Cloud Storage...' :
+                 cloudStatus === 'firebase' ? 'Firebase Cloud Active' :
+                 cloudStatus === 'github' ? 'GitHub Cloud Active' :
+                 cloudStatus === 'local' ? 'Local Storage Mode' :
+                 'Cloud Ready'}
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-col items-center mb-10">
             <div className="bg-emerald-600 p-4 rounded-2xl shadow-lg shadow-emerald-500/40 mb-6">
               <GraduationCap className="text-white w-8 h-8" />
@@ -99,6 +285,10 @@ export default function StudentLogin({ onLogin, onBack }) {
                   onChange={(e) => setStudentIdNum(e.target.value)}
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                   placeholder="2024-0001"
+                  required
+                  autoComplete="username"
+                  inputMode="text"
+                  autoCapitalize="characters"
                 />
               </div>
             </div>
@@ -114,6 +304,10 @@ export default function StudentLogin({ onLogin, onBack }) {
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                   placeholder="••••"
                   maxLength={4}
+                  required
+                  autoComplete="current-password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                 />
               </div>
             </div>

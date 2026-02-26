@@ -2,8 +2,22 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard, BookOpen, Users, FileEdit, ChevronRight, Calendar, GraduationCap,
   Filter, X, Plus, Trash2, Edit, Key, ClipboardList, Clock, MapPin, FileText, Save,
-  Database, Cloud
+  Database, Cloud, CloudOff, RefreshCw, CheckCircle, AlertTriangle, Github
 } from 'lucide-react';
+import { 
+  loadFromLocalStorage, 
+  saveToLocalStorage, 
+  syncCollectionToCloud, 
+  downloadAllFromCloud,
+  uploadAllToCloud,
+  isCloudSyncEnabled,
+  setCloudSyncEnabled,
+  getLastSyncTime,
+  initializeData,
+  getCloudStatus,
+  STORAGE_KEYS
+} from './cloudDataService';
+import { syncToGitHub, syncFromGitHub, getGitHubStatus } from './githubCloudService';
 
 // Helper functions
 const generateStudentIdNum = (year, sequence) => `${year}-${String(sequence).padStart(4, '0')}`;
@@ -67,6 +81,116 @@ export default function AdminDashboard({ onLogout }) {
   const [enrollments, setEnrollments] = useState(() => loadFromStorage('nlac_enrollments', initialEnrollments));
   const [assessments, setAssessments] = useState(() => loadFromStorage('nlac_assessments', initialAssessments));
   const [grades, setGrades] = useState(() => loadFromStorage('nlac_grades', initialGrades));
+
+  // Cloud sync states
+  const [cloudSyncEnabled, setCloudSyncEnabledLocal] = useState(() => isCloudSyncEnabled());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null); // 'success', 'error', null
+  const [lastSyncTime, setLastSyncTime] = useState(() => getLastSyncTime());
+  const [cloudSource, setCloudSource] = useState('initializing'); // 'firebase', 'github', 'local', 'initializing'
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Initialize data on mount
+  useEffect(() => {
+    initializeData();
+    
+    // Auto-enable cloud sync
+    setCloudSyncEnabled(true);
+    
+    // Listen for online/offline events
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check cloud status
+    const checkCloudStatus = async () => {
+      const status = getCloudStatus();
+      if (status.firebase === 'available') {
+        setCloudSource('firebase');
+      } else if (status.github && status.github.available) {
+        setCloudSource('github');
+      } else {
+        setCloudSource('local');
+      }
+    };
+    checkCloudStatus();
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Handle cloud sync toggle
+  const handleToggleCloudSync = async (enabled) => {
+    setCloudSyncEnabledLocal(enabled);
+    setCloudSyncEnabled(enabled);
+    
+    if (enabled) {
+      // Initial upload when enabling sync
+      setIsSyncing(true);
+      
+      // Upload to Firebase
+      const firebaseResult = await uploadAllToCloud();
+      
+      // Also upload to GitHub as backup
+      const localData = {
+        students,
+        courses,
+        enrollments,
+        assessments,
+        grades
+      };
+      await syncToGitHub(localData);
+      
+      setIsSyncing(false);
+      setSyncStatus(firebaseResult.success ? 'success' : 'error');
+      setLastSyncTime(getLastSyncTime() || new Date().toISOString());
+      setCloudSource(firebaseResult.success ? 'firebase' : 'github');
+      setTimeout(() => setSyncStatus(null), 3000);
+    }
+  };
+
+  // Handle manual sync
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    
+    // Upload to Firebase
+    const firebaseResult = await uploadAllToCloud();
+    
+    // Also upload to GitHub as backup
+    const localData = {
+      students,
+      courses,
+      enrollments,
+      assessments,
+      grades
+    };
+    await syncToGitHub(localData);
+    
+    setIsSyncing(false);
+    setSyncStatus(firebaseResult.success ? 'success' : 'error');
+    setLastSyncTime(getLastSyncTime() || new Date().toISOString());
+    setCloudSource(firebaseResult.success ? 'firebase' : 'github');
+    setTimeout(() => setSyncStatus(null), 3000);
+  };
+
+  // Handle download from cloud
+  const handleDownloadFromCloud = async () => {
+    if (!window.confirm('This will replace all local data with cloud data. Continue?')) {
+      return;
+    }
+    setIsSyncing(true);
+    const result = await downloadAllFromCloud();
+    setIsSyncing(false);
+    if (result.success) {
+      // Reload the page to refresh all data
+      window.location.reload();
+    } else {
+      alert('Download failed: ' + result.error);
+    }
+  };
 
   // Save to localStorage whenever data changes
   useEffect(() => { saveToStorage('nlac_students', students); }, [students]);
