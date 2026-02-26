@@ -1,6 +1,1 @@
-[
-  { "id": "en-1", "studentId": 1, "courseId": 101 },
-  { "id": "en-2", "studentId": 1, "courseId": 102 },
-  { "id": "en-3", "studentId": 2, "courseId": 101 },
-  { "id": "en-4", "studentId": 3, "courseId": 101 }
-]
+[]

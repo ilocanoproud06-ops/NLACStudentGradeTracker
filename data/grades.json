@@ -1,7 +1,1 @@
-[
-  { "id": "g1", "studentId": 1, "assessmentId": 501, "score": 95 },
-  { "id": "g2", "studentId": 2, "assessmentId": 501, "score": 88 },
-  { "id": "g3", "studentId": 1, "assessmentId": 502, "score": 45 },
-  { "id": "g4", "studentId": 1, "assessmentId": 503, "score": 18 },
-  { "id": "g5", "studentId": 2, "assessmentId": 504, "score": 92 }
-]
+[]

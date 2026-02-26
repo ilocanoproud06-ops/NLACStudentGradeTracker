@@ -24,40 +24,12 @@ const generateStudentIdNum = (year, sequence) => `${year}-${String(sequence).pad
 const generatePinCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 const getCurrentYear = () => new Date().getFullYear();
 
-// Initial data
-const initialStudents = [
-  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
-  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
-  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
-];
-
-const initialCourses = [
-  { id: 101, title: "Mathematics 101", code: "MATH101", type: "Lecture", day: "MWF", time: "09:00 - 10:00", room: "Room 301" },
-  { id: 102, title: "Computer Science", code: "CS202", type: "Lab", day: "TTh", time: "13:00 - 15:00", room: "Lab 101" }
-];
-
-const initialEnrollments = [
-  { id: 'en-1', studentId: 1, courseId: 101 },
-  { id: 'en-2', studentId: 1, courseId: 102 },
-  { id: 'en-3', studentId: 2, courseId: 101 },
-  { id: 'en-4', studentId: 3, courseId: 101 }
-];
-
-const initialAssessments = [
-  { id: 501, courseId: 101, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-15", instructorComments: "Covers chapters 1-3, focus on basic concepts" },
-  { id: 502, courseId: 101, category: "Written Exam", title: "Quiz 1", month: "February", hps: 50, date: "2024-02-20", instructorComments: "Short quiz on algebraic equations" },
-  { id: 503, courseId: 101, category: "Performance Task", title: "Seatwork", month: "February", hps: 20, date: "2024-02-22", instructorComments: "Daily practice exercises" },
-  { id: 504, courseId: 102, category: "Written Exam", title: "Prelim Exam", month: "February", hps: 100, date: "2024-02-16", instructorComments: "Programming fundamentals and algorithms" },
-  { id: 505, courseId: 102, category: "Performance Task", title: "Lab Exercise 1", month: "February", hps: 50, date: "2024-02-21", instructorComments: "Basic programming lab assignment" }
-];
-
-const initialGrades = [
-  { id: 'g1', studentId: 1, assessmentId: 501, score: 95 },
-  { id: 'g2', studentId: 2, assessmentId: 501, score: 88 },
-  { id: 'g3', studentId: 1, assessmentId: 502, score: 45 },
-  { id: 'g4', studentId: 1, assessmentId: 503, score: 18 },
-  { id: 'g5', studentId: 2, assessmentId: 504, score: 92 }
-];
+// Initial data - empty arrays, will be populated by Admin
+const initialStudents = [];
+const initialCourses = [];
+const initialEnrollments = [];
+const initialAssessments = [];
+const initialGrades = [];
 
 // Load from localStorage or use initial data
 const loadFromStorage = (key, initial) => {
