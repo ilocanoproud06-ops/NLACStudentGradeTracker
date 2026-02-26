@@ -62,18 +62,26 @@ export default function StudentLogin({ onLogin, onBack }) {
 
   // Sync student data from cloud (Firebase -> GitHub -> localStorage)
   const syncStudentDataFromCloud = async () => {
-    let studentData = null;
+    // First, try to load from localStorage (most reliable)
+    const localData = initializeStudentData();
+    if (localData && localData.length > 0) {
+      setCloudStatus('local');
+      console.log('Loaded from localStorage:', localData.length, 'students');
+      return localData;
+    }
     
-    // Try Firebase first
+    // Then try Firebase
     try {
       const { downloadAllFromCloud } = await import('./cloudDataService');
       const result = await downloadAllFromCloud();
       if (result.success && result.data && result.data.students.length > 0) {
         setCloudStatus('firebase');
+        // Save to localStorage for next time
+        saveToLocalStorage(STORAGE_KEYS.STUDENTS, result.data.students);
         return result.data.students;
       }
     } catch (error) {
-      console.log('Firebase not available, trying GitHub...');
+      console.log('Firebase not available, trying GitHub...', error);
     }
     
     // Try GitHub storage as fallback
@@ -81,7 +89,6 @@ export default function StudentLogin({ onLogin, onBack }) {
       const githubData = await syncFromGitHub();
       if (githubData && githubData.students && githubData.students.length > 0) {
         setCloudStatus('github');
-        // Save to localStorage
         saveToLocalStorage(STORAGE_KEYS.STUDENTS, githubData.students);
         return githubData.students;
       }
@@ -89,10 +96,9 @@ export default function StudentLogin({ onLogin, onBack }) {
       console.log('GitHub storage not available, using local data');
     }
     
-    // Fall back to localStorage
-    const localStudents = initializeStudentData();
-    setCloudStatus('local');
-    return localStudents;
+    // Fall back to sample data
+    setCloudStatus('sample');
+    return localData;
   };
 
   // Initialize student data - always try to load from all possible sources

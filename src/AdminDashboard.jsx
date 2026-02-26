@@ -75,19 +75,28 @@ const autoSyncToCloud = async (students, courses, enrollments, assessments, grad
   const data = { students, courses, enrollments, assessments, grades };
   
   try {
-    // Upload to Firebase
-    const { uploadAllToCloud } = await import('./cloudDataService');
-    await uploadAllToCloud(data);
-    console.log('✅ Auto-synced to Firebase');
+    // 1. Save to localStorage (immediate, works offline)
+    localStorage.setItem('nlac_students', JSON.stringify(students));
+    localStorage.setItem('nlac_courses', JSON.stringify(courses));
+    localStorage.setItem('nlac_enrollments', JSON.stringify(enrollments));
+    localStorage.setItem('nlac_assessments', JSON.stringify(assessments));
+    localStorage.setItem('nlac_grades', JSON.stringify(grades));
+    console.log('✅ Saved to localStorage');
     
-    // Also sync to GitHub cloud storage
+    // 2. Upload to Firebase
+    const { uploadAllToCloud } = await import('./cloudDataService');
+    const firebaseResult = await uploadAllToCloud(data);
+    console.log('Firebase sync result:', firebaseResult);
+    
+    // 3. Also sync to GitHub cloud storage
     const { syncToGitHub } = await import('./githubCloudService');
-    await syncToGitHub(data);
-    console.log('✅ Auto-synced to GitHub Cloud');
+    const githubResult = await syncToGitHub(data);
+    console.log('GitHub sync result:', githubResult);
     
     return { success: true };
   } catch (error) {
     console.error('Auto-sync error:', error);
+    alert(`Cloud sync error: ${error.message}`);
     return { success: false, error: error.message };
   }
 };
@@ -399,12 +408,14 @@ export default function AdminDashboard({ onLogout }) {
     }
     
     const sequence = getNextSequenceNumber(studentIdYear);
+    const newStudentId = generateStudentIdNum(studentIdYear, sequence);
+    const newPinCode = generatePinCode();
     const newStudentData = {
       id: Date.now(),
-      studentIdNum: generateStudentIdNum(studentIdYear, sequence),
+      studentIdNum: newStudentId,
       name: newStudent.name,
       program: newStudent.program,
-      pinCode: generatePinCode(),
+      pinCode: newPinCode,
       yearLevel: newStudent.yearLevel,
       email: newStudent.email
     };
@@ -412,6 +423,10 @@ export default function AdminDashboard({ onLogout }) {
     setStudents(updatedStudents);
     setNewStudent({ name: '', program: '', yearLevel: '', email: '' });
     setShowStudentModal(false);
+    
+    // Show success message with credentials
+    alert(`✅ Student registered successfully!\n\nID: ${newStudentId}\nPIN: ${newPinCode}\n\nSave these credentials for the student to login!`);
+    
     // Auto-sync to cloud
     await autoSyncToCloud(updatedStudents, courses, enrollments, assessments, grades);
   };
