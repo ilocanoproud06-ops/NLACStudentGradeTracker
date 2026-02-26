@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Search } from 'lucide-react';
 import studentSession from './sessionManager';
 import { loadFromLocalStorage, saveToLocalStorage, STORAGE_KEYS, isCloudSyncEnabled, setCloudSyncEnabled } from './cloudDataService';
 import { initializeGitHubStorage, syncToGitHub, syncFromGitHub, getGitHubStatus, isGitHubStorageAvailable } from './githubCloudService';
 
 export default function StudentLogin({ onLogin, onBack }) {
-  const [studentIdNum, setStudentIdNum] = useState('');
-  const [pinCode, setPinCode] = useState('');
+  // Single input for ID or PIN
+  const [loginInput, setLoginInput] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncEnabled, setSyncEnabled] = useState(false);
-  const [cloudStatus, setCloudStatus] = useState('initializing'); // 'firebase', 'github', 'local', 'initializing'
+  const [cloudStatus, setCloudStatus] = useState('initializing');
   const [isSyncing, setIsSyncing] = useState(false);
   const [students, setStudents] = useState([]);
 
@@ -95,75 +95,62 @@ export default function StudentLogin({ onLogin, onBack }) {
     return localStudents;
   };
 
-  // Initialize student data if not present
+  // Initialize student data - always try to load from all possible sources
   const initializeStudentData = () => {
-    const stored = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-    let data = stored ? JSON.parse(stored) : [];
-
-    // If no students exist, initialize with sample data
-    if (data.length === 0) {
-      const sampleStudents = [
-        { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
-        { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
-        { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
-      ];
-      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(sampleStudents));
-      localStorage.setItem('nlac_students', JSON.stringify(sampleStudents)); // Also set legacy key
-      data = sampleStudents;
-      console.log('Initialized localStorage with sample student data');
-      console.log('Sample students:', data);
-    }
-
-    return data;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    // Always read directly from localStorage to get the latest data
-    // This ensures we get the most recent students added from admin dashboard
-    let studentData = [];
+    const storageKeys = [
+      STORAGE_KEYS.STUDENTS,
+      'nlac_students',
+      'nlac_cloud_students'
+    ];
     
-    // Check multiple storage keys for compatibility
-    const storageKeys = [STORAGE_KEYS.STUDENTS, 'nlac_students', 'nlac_cloud_students'];
     for (const key of storageKeys) {
       const stored = localStorage.getItem(key);
       if (stored) {
         try {
-          studentData = JSON.parse(stored);
-          if (studentData.length > 0) {
-            console.log(`Loaded ${studentData.length} students from ${key}`);
-            break;
+          const data = JSON.parse(stored);
+          if (data.length > 0) {
+            console.log(`Loaded ${data.length} students from ${key}`);
+            return data;
           }
         } catch (err) {
           console.error(`Error parsing ${key}:`, err);
         }
       }
     }
+    
+    // Initialize with sample data if nothing found
+    const sampleStudents = [
+      { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+      { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+      { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
+    ];
+    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(sampleStudents));
+    localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
+    return sampleStudents;
+  };
 
-    // If still empty, initialize with sample data
-    if (!studentData || studentData.length === 0) {
-      studentData = initializeStudentData();
+  // Handle login with single input field (ID or PIN)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const input = loginInput.trim();
+    if (!input) {
+      setError('Please enter your Student ID or PIN');
+      return;
     }
 
-    // Debug information
-    console.log('Login attempt:', { studentIdNum, pinCode });
-    console.log('Available students:', studentData);
+    // Always read directly from localStorage to get the latest data
+    let studentData = initializeStudentData();
+    setStudents(studentData);
 
-    // Normalize input - trim whitespace
-    const normalizedIdNum = studentIdNum.trim();
-    const normalizedPin = pinCode.trim();
-
-    // Find matching student
+    // Try to find student by ID or PIN
     const student = studentData.find(
-      s => s.studentIdNum === normalizedIdNum && s.pinCode === normalizedPin
+      s => s.studentIdNum === input || s.pinCode === input
     );
 
-    // More detailed error messaging
     if (student) {
       console.log('Login successful for:', student);
-      // Start student session
       studentSession.startSession(student.id);
       
       // Sync data to cloud in background
@@ -175,15 +162,7 @@ export default function StudentLogin({ onLogin, onBack }) {
       
       onLogin(student);
     } else {
-      // Check what specifically is wrong
-      const idMatch = studentData.find(s => s.studentIdNum === normalizedIdNum);
-      if (!idMatch) {
-        setError('ID Number not found. Please check your ID Number.');
-      } else if (idMatch.pinCode !== normalizedPin) {
-        setError('Incorrect PIN Code. Please try again.');
-      } else {
-        setError('Invalid ID Number or PIN. Please try again.');
-      }
+      setError('Student ID or PIN not found. Please check and try again.');
     }
   };
 
@@ -286,40 +265,21 @@ export default function StudentLogin({ onLogin, onBack }) {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID Number</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Student ID or PIN Code</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                 <input 
                   type="text" 
-                  value={studentIdNum}
-                  onChange={(e) => setStudentIdNum(e.target.value)}
+                  value={loginInput}
+                  onChange={(e) => setLoginInput(e.target.value)}
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  placeholder="2024-0001"
+                  placeholder="Enter ID (2025-0001) or PIN (9815)"
                   required
-                  autoComplete="username"
+                  autoComplete="off"
                   inputMode="text"
-                  autoCapitalize="characters"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">PIN Code</label>
-              <div className="relative">
-                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="password" 
-                  value={pinCode}
-                  onChange={(e) => setPinCode(e.target.value)}
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  placeholder="••••"
-                  maxLength={4}
-                  required
-                  autoComplete="current-password"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                />
-              </div>
+              <p className="text-[10px] text-slate-500 ml-1">Enter your Student ID Number or PIN Code</p>
             </div>
 
             <button 
