@@ -18,7 +18,8 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         student: path.resolve(__dirname, 'student.html'),
-        admin: path.resolve(__dirname, 'admin.html')
+        admin: path.resolve(__dirname, 'admin.html'),
+        'student-access': path.resolve(__dirname, 'student-access.html')
       }
     }
   },
