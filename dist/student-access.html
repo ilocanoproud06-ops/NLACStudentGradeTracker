@@ -60,8 +60,12 @@
     </div>
 
     <script>
-      // Redirect to student.html
-      window.location.href = "student.html";
+      // Redirect to student portal with absolute path
+      const basePath = window.location.pathname.replace(
+        "/student-access.html",
+        "",
+      );
+      window.location.href = basePath + "/student.html";
     </script>
   </body>
 </html>
