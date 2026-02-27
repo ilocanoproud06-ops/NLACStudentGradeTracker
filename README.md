@@ -4,16 +4,15 @@ A React-based student grade management system for NLAC (New Life Academy of Comp
 
 ## Live URLs (GitHub Pages + Firebase)
 
-### Primary URLs
-- **GitHub Pages (Primary - Always Available):**
-  - Admin Portal: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/
-  - Student Portal: https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/student-access.html
+### Updated GitHub Pages URLs (Latest Deployment: February 27, 2026)
+- **Admin Portal:** https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/
+- **Student Portal:** https://ilocanoproud06-ops.github.io/NLACStudentGradeTracker/student-access.html
 
-- **Firebase (Backup):**
-  - Admin Portal: https://studentgradetracker-e04c0.web.app/
-  - Student Portal: https://studentgradetracker-e04c0.web.app/student-access.html
+### Firebase (Backup)
+- **Admin Portal:** https://studentgradetracker-e04c0.web.app/
+- **Student Portal:** https://studentgradetracker-e04c0.web.app/student-access.html
 
-> **Note:** If Firebase is not working, use GitHub Pages URLs. Both portals have cloud sync enabled with automatic fallback to local storage when cloud is unavailable.
+> **Note:** If GitHub Pages is not working, use Firebase URLs. Both portals have cloud sync enabled with automatic fallback to local storage when cloud is unavailable.
 
 ## Features
 
