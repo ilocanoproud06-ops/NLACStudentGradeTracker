@@ -8,6 +8,14 @@
     ],
     "rewrites": [
       {
+        "source": "/admin.html",
+        "destination": "/admin.html"
+      },
+      {
+        "source": "/student.html",
+        "destination": "/student.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

@@ -255,7 +255,8 @@ export const clearGitHubStorage = () => {
   }
 };
 
-// Unified cloud sync - tries Firebase first, then GitHub, then localStorage
+// Unified cloud sync - tries GitHub first, then localStorage
+// NOTE: Firebase integration is handled in cloudDataService.js to avoid circular dependency
 export const initializeCloudStorage = async () => {
   // Auto-enable cloud sync
   localStorage.setItem('nlac_sync_enabled', 'true');
@@ -263,25 +264,7 @@ export const initializeCloudStorage = async () => {
   let cloudSource = 'none';
   let data = null;
   
-  // Try Firebase first
-  try {
-    const { downloadAllFromCloud } = await import('./cloudDataService');
-    const result = await downloadAllFromCloud();
-    if (result.success && result.data && result.data.students.length > 0) {
-      console.log('✅ Using Firebase Cloud Storage');
-      cloudSource = 'firebase';
-      data = result.data;
-      
-      // Also backup to GitHub
-      await syncToGitHub(result.data);
-      
-      return { success: true, source: 'firebase', data };
-    }
-  } catch (error) {
-    console.log('Firebase not available, trying GitHub...');
-  }
-  
-  // Try GitHub Cloud Storage
+  // Try GitHub Cloud Storage first (doesn't require Firebase)
   try {
     const result = await syncFromGitHub();
     if (result.success && result.data && result.data.students.length > 0) {
@@ -292,15 +275,15 @@ export const initializeCloudStorage = async () => {
       return { success: true, source: 'github', data };
     }
   } catch (error) {
-    console.log('GitHub Cloud not available, using localStorage...');
+    console.log('GitHub Cloud not available, initializing...');
   }
   
   // Fall back to localStorage
-  const localData = getSampleData();
-  await syncToGitHub(localData);
+  data = getSampleData();
+  await syncToGitHub(data);
   
   console.log('✅ Using localStorage');
-  return { success: true, source: 'local', data: localData };
+  return { success: true, source: 'local', data: data };
 };
 
 // Export all functions

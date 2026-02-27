@@ -7,6 +7,14 @@ export default defineConfig({
   base: './',
   build: {
     rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Keep all code in single chunks per entry to avoid cross-loading issues
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
+      },
       input: {
         main: path.resolve(__dirname, 'index.html'),
         student: path.resolve(__dirname, 'student.html'),

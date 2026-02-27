@@ -1,7 +1,8 @@
 // Cloud Data Service - Unified storage layer for NLAC Grade Tracker
 // Handles localStorage, Firebase Firestore, and GitHub Cloud Storage for cloud sync
 
-import { db } from './firebaseConfig';
+// Import Firebase - handle initialization issues gracefully
+import { initialized, db as firebaseDb } from './firebaseConfig';
 import { 
   collection, 
   doc, 
@@ -18,6 +19,23 @@ import {
 
 // Import GitHub Cloud Service for fallback
 import { syncToGitHub, syncFromGitHub, getGitHubStatus, initializeGitHubStorage } from './githubCloudService';
+
+// Get db safely
+const getDb = () => {
+  try {
+    if (firebaseDb) {
+      return firebaseDb;
+    }
+    // Try to get from initialized
+    if (initialized && initialized.db) {
+      return initialized.db;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Firebase DB not available:', error);
+    return null;
+  }
+};
 
 // Collection names in Firestore
 const COLLECTIONS = {
@@ -119,6 +137,12 @@ export const setCloudSyncEnabled = (enabled) => {
 
 // Upload all data to Firebase
 export const uploadAllToCloud = async (data = null) => {
+  const db = getDb();
+  if (!db) {
+    console.warn('Firebase not available, skipping cloud upload');
+    return { success: false, error: 'Firebase not available' };
+  }
+  
   // Use provided data or load from localStorage
   let uploadData;
   if (data) {
@@ -187,6 +211,12 @@ export const uploadAllToCloud = async (data = null) => {
 
 // Download all data from Firebase
 export const downloadAllFromCloud = async () => {
+  const db = getDb();
+  if (!db) {
+    console.warn('Firebase not available, skipping cloud download');
+    return { success: false, error: 'Firebase not available' };
+  }
+  
   try {
     // Download students
     const studentsSnap = await getDocs(query(collection(db, COLLECTIONS.STUDENTS), orderBy('id')));
@@ -229,6 +259,12 @@ export const downloadAllFromCloud = async () => {
 
 // Sync single collection to cloud
 export const syncCollectionToCloud = async (collectionName, data) => {
+  const db = getDb();
+  if (!db) {
+    console.warn('Firebase not available, skipping sync');
+    return { success: false, error: 'Firebase not available' };
+  }
+  
   if (!isCloudSyncEnabled()) {
     console.log('Cloud sync is disabled, saving to localStorage only');
     return { success: false, reason: 'disabled' };
@@ -263,6 +299,12 @@ export const syncCollectionToCloud = async (collectionName, data) => {
 
 // Sync single collection from cloud
 export const syncCollectionFromCloud = async (collectionName, localStorageKey) => {
+  const db = getDb();
+  if (!db) {
+    console.warn('Firebase not available, skipping sync');
+    return { success: false, error: 'Firebase not available' };
+  }
+  
   try {
     const snap = await getDocs(collection(db, collectionName));
     const data = snap.docs.map(doc => {
@@ -289,6 +331,12 @@ export const getLastSyncTime = () => {
 
 // Setup real-time listener for cloud changes
 export const setupCloudListener = (callback) => {
+  const db = getDb();
+  if (!db) {
+    console.warn('Firebase not available, skipping cloud listener');
+    return () => {};
+  }
+  
   if (!isCloudSyncEnabled()) {
     return () => {}; // Return empty cleanup function
   }

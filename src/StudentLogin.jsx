@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Search } from 'lucide-react';
 import studentSession from './sessionManager';
-import { loadFromLocalStorage, saveToLocalStorage, STORAGE_KEYS, isCloudSyncEnabled, setCloudSyncEnabled } from './cloudDataService';
+// NOTE: cloudDataService is dynamically imported to avoid circular dependency issues
 import { initializeGitHubStorage, syncToGitHub, syncFromGitHub, getGitHubStatus, isGitHubStorageAvailable } from './githubCloudService';
 
 export default function StudentLogin({ onLogin, onBack }) {
@@ -26,8 +26,11 @@ export default function StudentLogin({ onLogin, onBack }) {
     // Initialize student data and cloud services
     const initialize = async () => {
       try {
+        // Dynamic import to avoid circular dependency
+        const cloudService = await import('./cloudDataService');
+        
         // Auto-enable cloud sync by default
-        setCloudSyncEnabled(true);
+        cloudService.setCloudSyncEnabled(true);
         setSyncEnabled(true);
         
         // Initialize cloud storage (Firebase first, then GitHub fallback)
@@ -37,7 +40,7 @@ export default function StudentLogin({ onLogin, onBack }) {
         await initializeGitHubStorage();
         
         // Try to sync from cloud
-        const loadedStudents = await syncStudentDataFromCloud();
+        const loadedStudents = await syncStudentDataFromCloud(cloudService);
         setStudents(loadedStudents);
         
         setCloudStatus('ready');
@@ -61,7 +64,21 @@ export default function StudentLogin({ onLogin, onBack }) {
   }, []);
 
   // Sync student data from cloud (Firebase -> GitHub -> localStorage)
-  const syncStudentDataFromCloud = async () => {
+  const syncStudentDataFromCloud = async (cloudService) => {
+    // Define local storage keys to avoid circular dependency
+    const STORAGE_KEYS_LOCAL = {
+      STUDENTS: 'nlac_students',
+      COURSES: 'nlac_courses',
+      ENROLLMENTS: 'nlac_enrollments',
+      ASSESSMENTS: 'nlac_assessments',
+      GRADES: 'nlac_grades'
+    };
+    
+    // Helper to save to localStorage
+    const saveToLocal = (key, data) => {
+      localStorage.setItem(key, JSON.stringify(data));
+    };
+    
     // First, try to load from localStorage (most reliable)
     const localData = initializeStudentData();
     if (localData && localData.length > 0) {
@@ -77,7 +94,7 @@ export default function StudentLogin({ onLogin, onBack }) {
       if (result.success && result.data && result.data.students.length > 0) {
         setCloudStatus('firebase');
         // Save to localStorage for next time
-        saveToLocalStorage(STORAGE_KEYS.STUDENTS, result.data.students);
+        saveToLocal(STORAGE_KEYS_LOCAL.STUDENTS, result.data.students);
         return result.data.students;
       }
     } catch (error) {
@@ -89,7 +106,7 @@ export default function StudentLogin({ onLogin, onBack }) {
       const githubData = await syncFromGitHub();
       if (githubData && githubData.students && githubData.students.length > 0) {
         setCloudStatus('github');
-        saveToLocalStorage(STORAGE_KEYS.STUDENTS, githubData.students);
+        saveToLocal(STORAGE_KEYS_LOCAL.STUDENTS, githubData.students);
         return githubData.students;
       }
     } catch (error) {
@@ -103,8 +120,8 @@ export default function StudentLogin({ onLogin, onBack }) {
 
   // Initialize student data - always try to load from all possible sources
   const initializeStudentData = () => {
+    // Define local storage keys to avoid circular dependency
     const storageKeys = [
-      STORAGE_KEYS.STUDENTS,
       'nlac_students',
       'nlac_cloud_students'
     ];
@@ -130,7 +147,6 @@ export default function StudentLogin({ onLogin, onBack }) {
       { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
       { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
     ];
-    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(sampleStudents));
     localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
     return sampleStudents;
   };

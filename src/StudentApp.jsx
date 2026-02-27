@@ -5,11 +5,10 @@ import React, { useState, useEffect } from 'react';
 import StudentLogin from './StudentLogin';
 import StudentDashboard from './StudentDashboard';
 import StudentWelcome from './StudentWelcome';
-import { initializeData, loadFromLocalStorage, saveToLocalStorage, STORAGE_KEYS } from './cloudDataService';
 
 // Generate sample students if none exist
 const initializeStudentData = () => {
-  const stored = localStorage.getItem(STORAGE_KEYS.STUDENTS);
+  const stored = localStorage.getItem('nlac_students');
   let students = stored ? JSON.parse(stored) : [];
 
   if (students.length === 0) {
@@ -18,8 +17,7 @@ const initializeStudentData = () => {
       { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
       { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
     ];
-    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(sampleStudents));
-    localStorage.setItem('nlac_students', JSON.stringify(sampleStudents)); // Legacy key
+    localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
     students = sampleStudents;
     console.log('Initialized localStorage with sample student data');
   }
@@ -38,10 +36,7 @@ export default function StudentApp() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Initialize data from localStorage or cloud
-        await initializeData();
-        
-        // Also ensure student data is initialized
+        // Initialize local student data first (synchronous, no dependencies)
         initializeStudentData();
         
         setIsLoading(false);
@@ -52,7 +47,9 @@ export default function StudentApp() {
       }
     };
 
-    init();
+    // Defer initialization to avoid circular dependencies
+    const timer = setTimeout(init, 200);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleStudentLogin = (student) => {
