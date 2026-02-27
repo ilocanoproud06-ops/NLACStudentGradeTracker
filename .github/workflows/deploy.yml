@@ -6,11 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
-  # Add write permission for gh-pages branch
-  deployments: write
 
 concurrency:
   group: "pages"
@@ -35,14 +33,11 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
-
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           folder: dist
           branch: gh-pages
+          clean: true
+
