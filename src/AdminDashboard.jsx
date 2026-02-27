@@ -75,7 +75,15 @@ const autoSyncToCloud = async (students, courses, enrollments, assessments, grad
 
 export default function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('Enrollment');
-  const [selectedCourseId, setSelectedCourseId] = useState(101);
+  const [selectedCourseId, setSelectedCourseId] = useState(() => {
+    // Get first course ID from localStorage or use default
+    const stored = localStorage.getItem('nlac_courses');
+    if (stored) {
+      const courses = JSON.parse(stored);
+      if (courses.length > 0) return courses[0].id;
+    }
+    return 101;
+  });
   const [selectedMonth, setSelectedMonth] = useState('February');
   
   // Data states - load from localStorage
