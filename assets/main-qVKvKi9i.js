@@ -1,0 +1,1 @@
+import"./index-laPszZKe.js";import{c as e,j as t,R as o}from"./vendor-f07bxsqa.js";import{A as r}from"./App-DE7SW0Zk.js";import"./cloudDataService-C5DRQd6q.js";e.createRoot(document.getElementById("root")).render(t.jsx(o.StrictMode,{children:t.jsx(r,{})}));
