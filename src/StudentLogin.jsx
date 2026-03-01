@@ -148,6 +148,7 @@ export default function StudentLogin({ onLogin, onBack }) {
       { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
     ];
     localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
+    console.log('Initialized sample students in localStorage');
     return sampleStudents;
   };
 
@@ -162,13 +163,34 @@ export default function StudentLogin({ onLogin, onBack }) {
       return;
     }
 
-    // Always read directly from localStorage to get the latest data
-    let studentData = initializeStudentData();
-    setStudents(studentData);
+    // Ensure we have student data - check localStorage directly
+    let studentData = [];
+    const stored = localStorage.getItem('nlac_students');
+    if (stored) {
+      try {
+        studentData = JSON.parse(stored);
+      } catch (err) {
+        console.error('Error parsing student data:', err);
+      }
+    }
+    
+    // If still empty, use sample data
+    if (studentData.length === 0) {
+      studentData = [
+        { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+        { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+        { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
+      ];
+      // Save to localStorage
+      localStorage.setItem('nlac_students', JSON.stringify(studentData));
+    }
+    
+    console.log('Looking for student with input:', input);
+    console.log('Available students:', studentData);
 
-    // Try to find student by ID or PIN
+    // Try to find student by ID or PIN (handle both string and number comparisons)
     const student = studentData.find(
-      s => s.studentIdNum === input || s.pinCode === input
+      s => String(s.studentIdNum) === input || String(s.pinCode) === input
     );
 
     if (student) {
@@ -184,7 +206,9 @@ export default function StudentLogin({ onLogin, onBack }) {
       
       onLogin(student);
     } else {
-      setError('Student ID or PIN not found. Please check and try again.');
+      console.log('Student not found. Input:', input);
+      console.log('Students:', studentData.map(s => ({id: s.studentIdNum, pin: s.pinCode})));
+      setError('Student ID or PIN not found. Please check and try again. Try: 2024-0001 or 4521');
     }
   };
 
