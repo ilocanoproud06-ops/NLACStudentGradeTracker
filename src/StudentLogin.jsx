@@ -1,155 +1,83 @@
+// StudentLogin - Standalone Login Component
+// Simplified to avoid circular dependency issues
 import React, { useState, useEffect } from 'react';
-import { Key, GraduationCap, ArrowRight, User, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Search } from 'lucide-react';
-import studentSession from './sessionManager';
-// NOTE: cloudDataService is dynamically imported to avoid circular dependency issues
-import { initializeGitHubStorage, syncToGitHub, syncFromGitHub, getGitHubStatus, isGitHubStorageAvailable } from './githubCloudService';
+import { GraduationCap, ArrowRight, AlertCircle, ChevronLeft, Wifi, WifiOff, Cloud, CloudOff, RefreshCw, Search } from 'lucide-react';
+
+// Session management - inline to avoid import issues
+const studentSession = {
+  startSession: (studentId) => {
+    sessionStorage.setItem('studentSession', JSON.stringify({
+      studentId: studentId,
+      lastActivity: Date.now()
+    }));
+  },
+  validateSession: () => {
+    const sessionData = sessionStorage.getItem('studentSession');
+    if (!sessionData) return false;
+    try {
+      const parsed = JSON.parse(sessionData);
+      return !!parsed.studentId;
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
+// Sample students data
+const SAMPLE_STUDENTS = [
+  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
+];
 
 export default function StudentLogin({ onLogin, onBack }) {
   // Single input for ID or PIN
   const [loginInput, setLoginInput] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [syncEnabled, setSyncEnabled] = useState(false);
-  const [cloudStatus, setCloudStatus] = useState('initializing');
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [cloudStatus, setCloudStatus] = useState('ready');
   const [students, setStudents] = useState([]);
 
-  // Check online status and sync settings
+  // Initialize student data on mount
   useEffect(() => {
+    // Check online status
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    // Initialize student data and cloud services
-    const initialize = async () => {
+
+    // Load students from localStorage or use sample data
+    const stored = localStorage.getItem('nlac_students');
+    if (stored) {
       try {
-        // Dynamic import to avoid circular dependency
-        const cloudService = await import('./cloudDataService');
-        
-        // Auto-enable cloud sync by default
-        cloudService.setCloudSyncEnabled(true);
-        setSyncEnabled(true);
-        
-        // Initialize cloud storage (Firebase first, then GitHub fallback)
-        setCloudStatus('initializing');
-        
-        // Initialize GitHub storage as fallback
-        await initializeGitHubStorage();
-        
-        // Try to sync from cloud
-        const loadedStudents = await syncStudentDataFromCloud(cloudService);
-        setStudents(loadedStudents);
-        
-        setCloudStatus('ready');
-      } catch (error) {
-        console.error('Cloud initialization error:', error);
-        // Fall back to local data
-        const localStudents = initializeStudentData();
-        setStudents(localStudents);
-        setCloudStatus('local');
+        const data = JSON.parse(stored);
+        if (data.length > 0) {
+          setStudents(data);
+          console.log('Loaded students from localStorage:', data.length);
+        } else {
+          // Use sample data
+          localStorage.setItem('nlac_students', JSON.stringify(SAMPLE_STUDENTS));
+          setStudents(SAMPLE_STUDENTS);
+        }
+      } catch (err) {
+        console.error('Error parsing students:', err);
+        localStorage.setItem('nlac_students', JSON.stringify(SAMPLE_STUDENTS));
+        setStudents(SAMPLE_STUDENTS);
       }
-      
-      setIsLoading(false);
-    };
-    
-    initialize();
-    
+    } else {
+      // Initialize with sample data
+      localStorage.setItem('nlac_students', JSON.stringify(SAMPLE_STUDENTS));
+      setStudents(SAMPLE_STUDENTS);
+      console.log('Initialized sample students');
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
-  // Sync student data from cloud (Firebase -> GitHub -> localStorage)
-  const syncStudentDataFromCloud = async (cloudService) => {
-    // Define local storage keys to avoid circular dependency
-    const STORAGE_KEYS_LOCAL = {
-      STUDENTS: 'nlac_students',
-      COURSES: 'nlac_courses',
-      ENROLLMENTS: 'nlac_enrollments',
-      ASSESSMENTS: 'nlac_assessments',
-      GRADES: 'nlac_grades'
-    };
-    
-    // Helper to save to localStorage
-    const saveToLocal = (key, data) => {
-      localStorage.setItem(key, JSON.stringify(data));
-    };
-    
-    // First, try to load from localStorage (most reliable)
-    const localData = initializeStudentData();
-    if (localData && localData.length > 0) {
-      setCloudStatus('local');
-      console.log('Loaded from localStorage:', localData.length, 'students');
-      return localData;
-    }
-    
-    // Then try Firebase
-    try {
-      const { downloadAllFromCloud } = await import('./cloudDataService');
-      const result = await downloadAllFromCloud();
-      if (result.success && result.data && result.data.students.length > 0) {
-        setCloudStatus('firebase');
-        // Save to localStorage for next time
-        saveToLocal(STORAGE_KEYS_LOCAL.STUDENTS, result.data.students);
-        return result.data.students;
-      }
-    } catch (error) {
-      console.log('Firebase not available, trying GitHub...', error);
-    }
-    
-    // Try GitHub storage as fallback
-    try {
-      const githubData = await syncFromGitHub();
-      if (githubData && githubData.students && githubData.students.length > 0) {
-        setCloudStatus('github');
-        saveToLocal(STORAGE_KEYS_LOCAL.STUDENTS, githubData.students);
-        return githubData.students;
-      }
-    } catch (error) {
-      console.log('GitHub storage not available, using local data');
-    }
-    
-    // Fall back to sample data
-    setCloudStatus('sample');
-    return localData;
-  };
-
-  // Initialize student data - always try to load from all possible sources
-  const initializeStudentData = () => {
-    // Define local storage keys to avoid circular dependency
-    const storageKeys = [
-      'nlac_students',
-      'nlac_cloud_students'
-    ];
-    
-    for (const key of storageKeys) {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try {
-          const data = JSON.parse(stored);
-          if (data.length > 0) {
-            console.log(`Loaded ${data.length} students from ${key}`);
-            return data;
-          }
-        } catch (err) {
-          console.error(`Error parsing ${key}:`, err);
-        }
-      }
-    }
-    
-    // Initialize with sample data if nothing found
-    const sampleStudents = [
-      { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
-      { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
-      { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
-    ];
-    localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
-    return sampleStudents;
-  };
 
   // Handle login with single input field (ID or PIN)
   const handleSubmit = async (e) => {
@@ -162,52 +90,28 @@ export default function StudentLogin({ onLogin, onBack }) {
       return;
     }
 
-    // Always read directly from localStorage to get the latest data
-    let studentData = initializeStudentData();
-    setStudents(studentData);
+    // Ensure we have student data
+    let studentData = students;
+    if (studentData.length === 0) {
+      // Fallback to sample data
+      studentData = SAMPLE_STUDENTS;
+    }
+    
+    console.log('Looking for student with input:', input);
+    console.log('Available students:', studentData.map(s => ({id: s.studentIdNum, pin: s.pinCode})));
 
     // Try to find student by ID or PIN
     const student = studentData.find(
-      s => s.studentIdNum === input || s.pinCode === input
+      s => String(s.studentIdNum) === input || String(s.pinCode) === input
     );
 
     if (student) {
       console.log('Login successful for:', student);
       studentSession.startSession(student.id);
-      
-      // Sync data to cloud in background
-      try {
-        await syncStudentDataToCloud(student);
-      } catch (err) {
-        console.log('Background sync failed:', err);
-      }
-      
       onLogin(student);
     } else {
-      setError('Student ID or PIN not found. Please check and try again.');
-    }
-  };
-
-  // Sync student data to cloud (Firebase + GitHub)
-  const syncStudentDataToCloud = async (student) => {
-    const allData = {
-      students: students,
-      lastUpdated: new Date().toISOString()
-    };
-    
-    // Upload to Firebase
-    try {
-      const { uploadAllToCloud } = await import('./cloudDataService');
-      await uploadAllToCloud();
-    } catch (err) {
-      console.log('Firebase upload failed:', err);
-    }
-    
-    // Upload to GitHub as backup
-    try {
-      await syncToGitHub(allData);
-    } catch (err) {
-      console.log('GitHub upload failed:', err);
+      console.log('Student not found. Input:', input);
+      setError('Student ID or PIN not found. Try: 2024-0001 or 4521');
     }
   };
 

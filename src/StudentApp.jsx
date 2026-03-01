@@ -6,23 +6,36 @@ import StudentLogin from './StudentLogin';
 import StudentDashboard from './StudentDashboard';
 import StudentWelcome from './StudentWelcome';
 
+// Sample students data - centralized to avoid duplication
+const SAMPLE_STUDENTS = [
+  { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
+  { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
+  { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
+];
+
 // Generate sample students if none exist
 const initializeStudentData = () => {
-  const stored = localStorage.getItem('nlac_students');
-  let students = stored ? JSON.parse(stored) : [];
+  try {
+    const stored = localStorage.getItem('nlac_students');
+    let students = [];
 
-  if (students.length === 0) {
-    const sampleStudents = [
-      { id: 1, studentIdNum: "2024-0001", name: "Garcia, Maria S.", program: "BSCS", pinCode: "4521", yearLevel: "1st Year", email: "" },
-      { id: 2, studentIdNum: "2024-0002", name: "Wilson, James K.", program: "BSIT", pinCode: "7832", yearLevel: "2nd Year", email: "" },
-      { id: 3, studentIdNum: "2024-0003", name: "Chen, Robert L.", program: "BS MATH", pinCode: "9012", yearLevel: "3rd Year", email: "" }
-    ];
-    localStorage.setItem('nlac_students', JSON.stringify(sampleStudents));
-    students = sampleStudents;
-    console.log('Initialized localStorage with sample student data');
+    if (stored) {
+      students = JSON.parse(stored);
+    }
+
+    if (!students || students.length === 0) {
+      localStorage.setItem('nlac_students', JSON.stringify(SAMPLE_STUDENTS));
+      console.log('Initialized localStorage with sample student data');
+      return SAMPLE_STUDENTS;
+    }
+
+    return students;
+  } catch (err) {
+    console.error('Error initializing student data:', err);
+    // Fallback to sample data
+    localStorage.setItem('nlac_students', JSON.stringify(SAMPLE_STUDENTS));
+    return SAMPLE_STUDENTS;
   }
-
-  return students;
 };
 
 export default function StudentApp() {
@@ -34,21 +47,19 @@ export default function StudentApp() {
 
   // Initialize data on mount
   useEffect(() => {
-    const init = async () => {
+    // Use setTimeout to ensure DOM is ready and avoid initialization conflicts
+    const timer = setTimeout(() => {
       try {
         // Initialize local student data first (synchronous, no dependencies)
         initializeStudentData();
-        
         setIsLoading(false);
       } catch (err) {
         console.error('Initialization error:', err);
-        setError(err.message);
+        setError(String(err));
         setIsLoading(false);
       }
-    };
+    }, 100);
 
-    // Defer initialization to avoid circular dependencies
-    const timer = setTimeout(init, 200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -86,7 +97,7 @@ export default function StudentApp() {
         <div className="bg-red-500/10 border border-red-500/50 p-8 rounded-2xl max-w-md text-center">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
           <h2 className="text-white font-black text-xl mb-2">Error Loading Portal</h2>
-          <p className="text-red-400 mb-4">{error}</p>
+          <p className="text-red-400 mb-4">Please refresh the page</p>
           <button 
             onClick={() => window.location.reload()}
             className="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-3 rounded-xl"
